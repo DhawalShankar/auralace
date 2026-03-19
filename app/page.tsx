@@ -15,6 +15,10 @@ const defaultParams: AudioParams = {
   treble: 0, reverb: 0, loudness: 0,
 };
 
+// Keep in sync with backend MAX_FILE_BYTES and MAX_DURATION_SECS
+const MAX_FILE_BYTES    = 15 * 1024 * 1024; // 15 MB
+const MAX_DURATION_SECS = 300;              // 5 minutes
+
 const T = {
   primary:     "#0a0a0a",
   secondary:   "#3a3a3a",
@@ -53,16 +57,23 @@ export default function Home() {
 
   const handleProcess = async () => {
     if (!file) return;
-    // Step 1: uploading — triggers 0→15% animation in ProcessingProgress
+
+    // ── Client-side validation — catch obvious errors before hitting the backend ──
+    if (file.size > MAX_FILE_BYTES) {
+      setState({ status: "error", error: `File too large. Maximum size is 15MB.` });
+      return;
+    }
+    if (!file.type.startsWith("audio/") && !file.name.endsWith(".wav") && !file.name.endsWith(".mp3")) {
+      setState({ status: "error", error: "Only WAV and MP3 files are supported." });
+      return;
+    }
+
     setState({ status: "uploading" });
     try {
-      // Small delay so the uploading phase is visible before switching to processing
       await new Promise((res) => setTimeout(res, 400));
-      // Step 2: processing — triggers 15→90% asymptotic animation
       setState({ status: "processing" });
       const data = await processAudio(file, params);
       setResult(data);
-      // Step 3: done — snaps to 100%, fades out
       setState({ status: "done" });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
@@ -89,13 +100,11 @@ export default function Home() {
       <style>{`
         * { box-sizing: border-box; }
 
-        /* ── Navbar ── */
         .nav-desktop-links { display: flex; align-items: center; gap: 36px; }
         .nav-desktop-status { display: flex; align-items: center; gap: 16px; }
         .nav-mobile-right { display: none; }
         .mobile-menu { display: none; }
 
-        /* ── Sections ── */
         .section-grid { display: grid; grid-template-columns: 1fr 1fr; }
         .col-left {
           padding: 72px 56px 72px 72px;
@@ -109,7 +118,6 @@ export default function Home() {
         }
         .col-start { justify-content: flex-start; }
 
-        /* ── Typography ── */
         .hero-h1 {
           font-family: 'Syne', sans-serif;
           font-size: clamp(44px, 5vw, 70px);
@@ -121,7 +129,6 @@ export default function Home() {
           color: ${T.primary}; margin-bottom: 36px; letter-spacing: -0.02em;
         }
 
-        /* ── Footer ── */
         .footer-outer { padding: 0 72px; }
         .footer-top {
           display: flex; align-items: center; justify-content: space-between;
@@ -133,7 +140,6 @@ export default function Home() {
           padding: 18px 0;
         }
 
-        /* ── Mobile ── */
         @media (max-width: 767px) {
           .nav-desktop-links { display: none !important; }
           .nav-desktop-status { display: none !important; }
@@ -168,7 +174,6 @@ export default function Home() {
           padding: "0 32px", height: 60,
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/logo.png" alt="AuraLace" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }} />
             <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: "0.04em", color: T.primary }}>
@@ -176,7 +181,6 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Desktop nav links */}
           <div className="nav-desktop-links">
             {["Studio", "Parameters", "Output"].map((item) => {
               const id = item.toLowerCase();
@@ -196,7 +200,6 @@ export default function Home() {
             })}
           </div>
 
-          {/* Desktop status + version */}
           <div className="nav-desktop-status">
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
               {apiDot}
@@ -212,7 +215,6 @@ export default function Home() {
             }}>v1.0</span>
           </div>
 
-          {/* Mobile: dot + hamburger */}
           <div className="nav-mobile-right">
             {apiDot}
             <button
@@ -270,14 +272,19 @@ export default function Home() {
                 }} />
               </h1>
               <p style={{ fontSize: 13, color: T.secondary, lineHeight: 1.9, maxWidth: 420, marginBottom: 28, marginTop: 8 }}>
-                Real-time pitch shifting, time stretching & bass boost —
-                powered by FFT, phase vocoder & frequency-domain filtering.
+                Change the pitch, speed, bass, and feel of any audio file.
+                Upload a song, a voice recording, or a podcast clip — and hear the difference instantly.
               </p>
+
+              {/* Feature pills — plain English */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 32 }}>
                 {[
-                  { label: "FFT", green: true }, { label: "Phase Vocoder", green: true },
-                  { label: "Time-Stretch", green: false }, { label: "Freq-Domain EQ", green: false },
-                  { label: "Librosa", green: true }, { label: "NumPy · SciPy", green: false },
+                  { label: "Pitch control",   green: true  },
+                  { label: "Speed control",   green: true  },
+                  { label: "Bass boost",       green: false },
+                  { label: "Treble boost",     green: false },
+                  { label: "Reverb",           green: true  },
+                  { label: "Loudness adjust",  green: false },
                 ].map(({ label, green }) => (
                   <span key={label} style={{
                     fontSize: 10, padding: "4px 11px", borderRadius: 99,
@@ -287,8 +294,15 @@ export default function Home() {
                   }}>{label}</span>
                 ))}
               </div>
+
+              {/* Stats — corrected limits */}
               <div style={{ display: "flex", gap: 32 }}>
-                {[{ num: "6", label: "Signal transforms" }, { num: "50MB", label: "Max file size" }, { num: "WAV", label: "Output format" }].map(({ num, label }) => (
+                {[
+                  { num: "6",    label: "Audio controls"  },
+                  { num: "15MB", label: "Max file size"    },
+                  { num: "5min", label: "Max audio length" },
+                  { num: "WAV",  label: "Output format"   },
+                ].map(({ num, label }) => (
                   <div key={label}>
                     <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: T.green, marginBottom: 4 }}>{num}</p>
                     <p style={{ fontSize: 10, color: T.muted, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</p>
@@ -304,7 +318,21 @@ export default function Home() {
               <div style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden" }}>
                 <AudioUploader onFileSelect={setFile} selectedFile={file} />
               </div>
-              <div style={{ marginTop: 28, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+
+              {/* Limit hints under uploader */}
+              <div style={{ marginTop: 10, display: "flex", gap: 16, justifyContent: "center" }}>
+                {[
+                  { icon: "📁", text: "WAV or MP3 only" },
+                  { icon: "⚖️", text: "Max 15 MB"       },
+                  { icon: "⏱️", text: "Max 5 minutes"   },
+                ].map(({ icon, text }) => (
+                  <span key={text} style={{ fontSize: 10, color: T.muted, display: "flex", alignItems: "center", gap: 4 }}>
+                    <span>{icon}</span>{text}
+                  </span>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
                   <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${T.border})` }} />
                   <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.2em", fontWeight: 600 }}>SCROLL TO CONFIGURE</span>
@@ -323,7 +351,7 @@ export default function Home() {
               <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.purpleMid, fontWeight: 600, marginBottom: 12 }}>
                 Step 2 — Configure
               </p>
-              <h2 className="section-h2">DSP Parameters</h2>
+              <h2 className="section-h2">Audio Controls</h2>
               <ParameterSliders params={params} onChange={setParams} />
             </div>
             <div className="col-right col-start">
@@ -348,7 +376,7 @@ export default function Home() {
                     ))}
                   </div>
                   <p style={{ fontSize: 12, color: T.tertiary, fontWeight: 600, marginTop: 10 }}>Waveform will appear here</p>
-                  <p style={{ fontSize: 11, color: T.muted }}>Process your audio to compare waveforms</p>
+                  <p style={{ fontSize: 11, color: T.muted }}>Process your audio to compare before and after</p>
                 </div>
               )}
             </div>
@@ -362,15 +390,15 @@ export default function Home() {
               <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.purpleMid, fontWeight: 600, marginBottom: 12 }}>
                 Step 3 — Process
               </p>
-              <h2 className="section-h2">Applied Transforms</h2>
+              <h2 className="section-h2">Your Settings</h2>
               <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 20 }}>
                 {[
-                  { label: "Pitch shift",  value: `${params.pitch > 0 ? "+" : ""}${params.pitch} st`,      green: true  },
-                  { label: "Time stretch", value: `${params.speed.toFixed(2)}×`,                            green: true  },
-                  { label: "Bass boost",   value: `+${params.bass} dB`,                                     green: false },
-                  { label: "Treble boost", value: `+${params.treble} dB`,                                   green: true  },
-                  { label: "Reverb",       value: `${params.reverb}%`,                                      green: false },
-                  { label: "Loudness",     value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`, green: true  },
+                  { label: "Pitch shift",    value: `${params.pitch > 0 ? "+" : ""}${params.pitch} semitones`, green: true  },
+                  { label: "Speed",          value: `${params.speed.toFixed(2)}×`,                             green: true  },
+                  { label: "Bass boost",     value: `+${params.bass} dB`,                                      green: false },
+                  { label: "Treble boost",   value: `+${params.treble} dB`,                                    green: true  },
+                  { label: "Reverb",         value: `${params.reverb}%`,                                       green: false },
+                  { label: "Loudness",       value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`,  green: true  },
                 ].map((row, i, arr) => (
                   <div key={row.label} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -384,7 +412,6 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* ProcessButton + progress bar stacked together */}
               <ProcessButton state={state} disabled={!file} onClick={handleProcess} />
               <ProcessingProgress status={state.status} />
             </div>
@@ -407,7 +434,7 @@ export default function Home() {
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <p style={{ fontSize: 13, color: T.tertiary, fontWeight: 600, marginBottom: 6 }}>No output yet</p>
-                    <p style={{ fontSize: 11, color: T.muted, lineHeight: 1.7 }}>Upload a file, configure parameters<br />and hit Process Audio</p>
+                    <p style={{ fontSize: 11, color: T.muted, lineHeight: 1.7 }}>Upload a file, adjust the controls,<br />and hit Process Audio</p>
                   </div>
                 </div>
               )}
@@ -431,9 +458,10 @@ export default function Home() {
               ))}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>Signal Processing</span>
+              {/* Limits reminder in footer */}
+              <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>File Limits</span>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {["FFT", "Phase Vocoder", "Convolution"].map((tag) => (
+                {["WAV · MP3", "Max 15 MB", "Max 5 min"].map((tag) => (
                   <span key={tag} style={{ fontSize: 9, padding: "3px 10px", borderRadius: 99, border: `1px solid ${T.borderGreen}`, color: T.green, background: T.greenTint }}>{tag}</span>
                 ))}
               </div>
