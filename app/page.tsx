@@ -19,12 +19,12 @@ export default function Home() {
   const [params, setParams] = useState<AudioParams>(defaultParams);
   const [state, setState] = useState<ProcessState>({ status: "idle" });
   const [result, setResult] = useState<ProcessResponse | null>(null);
+  const [activeNav, setActiveNav] = useState("studio");
 
   const handleProcess = async () => {
     if (!file) return;
-    setState({ status: "uploading" });
+    setState({ status: "processing" });
     try {
-      setState({ status: "processing" });
       const data = await processAudio(file, params);
       setResult(data);
       setState({ status: "done" });
@@ -34,30 +34,28 @@ export default function Home() {
     }
   };
 
-  const [activeNav, setActiveNav] = useState("studio");
-
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setActiveNav(id);
   };
 
   const T = {
-    primary:    "#0a0a0a",
-    secondary:  "#3a3a3a",
-    tertiary:   "#6b6b6b",
-    muted:      "#9a9a9a",
-    green:      "#1a4731",
-    greenMid:   "#2d6a4f",
-    greenLight: "#52b788",
-    purple:     "#5b3fa0",
-    purpleMid:  "#7c5cbf",
-    purpleLight:"#a78bda",
-    white:      "#ffffff",
-    offWhite:   "#f8f7fc",
-    greenTint:  "#f2faf6",
-    purpleTint: "#f4f0fc",
-    border:     "#e2ddf5",
-    borderGreen:"#b7dfc8",
+    primary:     "#0a0a0a",
+    secondary:   "#3a3a3a",
+    tertiary:    "#6b6b6b",
+    muted:       "#9a9a9a",
+    green:       "#1a4731",
+    greenMid:    "#2d6a4f",
+    greenLight:  "#52b788",
+    purple:      "#5b3fa0",
+    purpleMid:   "#7c5cbf",
+    purpleLight: "#a78bda",
+    white:       "#ffffff",
+    offWhite:    "#f8f7fc",
+    greenTint:   "#f2faf6",
+    purpleTint:  "#f4f0fc",
+    border:      "#e2ddf5",
+    borderGreen: "#b7dfc8",
   };
 
   const sectionLeft: React.CSSProperties = {
@@ -85,7 +83,7 @@ export default function Home() {
   return (
     <div style={{ fontFamily: "'DM Mono', monospace", background: T.white, minHeight: "100vh", color: T.primary }}>
 
-      {/* ── NAVBAR ── */}
+      {/* NAVBAR */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
         background: "rgba(255,255,255,0.95)",
@@ -95,7 +93,6 @@ export default function Home() {
         padding: "0 64px", height: 68,
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <img src="/logo.png" alt="AuraLace" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "contain" }} />
           <div>
@@ -108,7 +105,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Center nav links */}
         <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
           {["Studio", "Parameters", "Output"].map((item) => {
             const id = item.toLowerCase();
@@ -136,7 +132,6 @@ export default function Home() {
           })}
         </div>
 
-        {/* Right side */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e88" }} />
@@ -152,16 +147,14 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* ══ HERO ══ */}
+      {/* HERO */}
       <section id="studio" style={{
         minHeight: "100vh",
         display: "grid", gridTemplateColumns: "1fr 1fr",
         paddingTop: 68,
       }}>
-        {/* LEFT */}
         <div style={{ ...sectionLeft, justifyContent: "center" }}>
           <p style={eyebrow}>Lace Your Audio · Premium Signal Experience</p>
-
           <h1 style={{
             fontFamily: "'Syne', sans-serif",
             fontSize: "clamp(44px, 5vw, 70px)",
@@ -186,12 +179,10 @@ export default function Home() {
               background: `linear-gradient(90deg, ${T.green}, ${T.purpleMid}, transparent)`,
             }} />
           </h1>
-
           <p style={{ fontSize: 14, color: T.secondary, lineHeight: 2, maxWidth: 420, marginBottom: 40 }}>
             Real-time pitch shifting, time stretching & bass boost —
             powered by FFT, phase vocoder & frequency-domain filtering.
           </p>
-
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 52 }}>
             {[
               { label: "FFT",            green: true  },
@@ -210,7 +201,6 @@ export default function Home() {
               }}>{label}</span>
             ))}
           </div>
-
           <div style={{ display: "flex", gap: 48 }}>
             {[
               { num: "6",    label: "Signal transforms" },
@@ -225,7 +215,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* RIGHT */}
         <div style={{ ...sectionRight }}>
           <p style={{ ...eyebrow, color: T.tertiary, marginBottom: 20 }}>Step 1 — Upload Your File</p>
           <div style={{
@@ -236,22 +225,18 @@ export default function Home() {
           }}>
             <AudioUploader onFileSelect={setFile} selectedFile={file} />
           </div>
-
           <div style={{ marginTop: 40, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
               <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${T.border})` }} />
               <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.2em", fontWeight: 600 }}>SCROLL TO CONFIGURE</span>
               <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${T.border}, transparent)` }} />
             </div>
-            <span
-              onClick={() => scrollTo("parameters")}
-              style={{ fontSize: 20, color: T.purpleMid, cursor: "pointer" }}
-            >↓</span>
+            <span onClick={() => scrollTo("parameters")} style={{ fontSize: 20, color: T.purpleMid, cursor: "pointer" }}>↓</span>
           </div>
         </div>
       </section>
 
-      {/* ══ SECTION 2 — Sliders + Waveform ══ */}
+      {/* SECTION 2 — Sliders + Waveform */}
       <section id="parameters" style={{
         display: "grid", gridTemplateColumns: "1fr 1fr",
         borderTop: `1px solid ${T.border}`,
@@ -266,11 +251,20 @@ export default function Home() {
         <div style={{ ...sectionRight, justifyContent: "flex-start" }}>
           <p style={{ ...eyebrow, color: T.tertiary }}>Visualization</p>
           <h2 style={sectionTitle}>Waveform</h2>
-
           {result ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <WaveformCanvas data={result.original_waveform} label="Original" color="green" duration={result.duration_original} />
-              <WaveformCanvas data={result.processed_waveform} label="Processed" color="purple" duration={result.duration_processed} />
+              <WaveformCanvas
+                data={result.original_waveform}
+                label="Original"
+                color="#52b788"
+                duration={result.duration_original}
+              />
+              <WaveformCanvas
+                data={result.processed_waveform}
+                label="Processed"
+                color="#a78bda"
+                duration={result.duration_processed}
+              />
             </div>
           ) : (
             <div style={{
@@ -299,7 +293,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ══ SECTION 3 — Summary + Result ══ */}
+      {/* SECTION 3 — Summary + Result */}
       <section id="output" style={{
         display: "grid", gridTemplateColumns: "1fr 1fr",
         borderTop: `1px solid ${T.border}`,
@@ -308,15 +302,14 @@ export default function Home() {
         <div style={{ ...sectionLeft, justifyContent: "flex-start", gap: 0 }}>
           <p style={eyebrow}>Step 3 — Process</p>
           <h2 style={sectionTitle}>Applied Transforms</h2>
-
           <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 24 }}>
             {[
-              { label: "Pitch shift",  value: `${params.pitch > 0 ? "+" : ""}${params.pitch} st`,           green: true  },
-              { label: "Time stretch", value: `${params.speed.toFixed(2)}×`,                                  green: true  },
-              { label: "Bass boost",   value: `+${params.bass} dB`,                                           green: false },
-              { label: "Treble boost", value: `+${params.treble} dB`,                                         green: true  },
-              { label: "Reverb",       value: `${params.reverb}%`,                                            green: false },
-              { label: "Loudness",     value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`,       green: true  },
+              { label: "Pitch shift",  value: `${params.pitch > 0 ? "+" : ""}${params.pitch} st`,      green: true  },
+              { label: "Time stretch", value: `${params.speed.toFixed(2)}×`,                            green: true  },
+              { label: "Bass boost",   value: `+${params.bass} dB`,                                     green: false },
+              { label: "Treble boost", value: `+${params.treble} dB`,                                   green: true  },
+              { label: "Reverb",       value: `${params.reverb}%`,                                      green: false },
+              { label: "Loudness",     value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`, green: true  },
             ].map((row, i, arr) => (
               <div key={row.label} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -333,14 +326,12 @@ export default function Home() {
               </div>
             ))}
           </div>
-
           <ProcessButton state={state} disabled={!file} onClick={handleProcess} />
         </div>
 
         <div style={{ ...sectionRight, justifyContent: "flex-start" }}>
           <p style={{ ...eyebrow, color: T.tertiary }}>Output</p>
           <h2 style={sectionTitle}>Processed Audio</h2>
-
           {result ? (
             <div style={{
               background: T.white, borderRadius: 20,
@@ -379,14 +370,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* FOOTER */}
       <footer style={{ borderTop: `1px solid ${T.border}`, background: T.white, padding: "0 72px" }}>
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "40px 0 32px",
           borderBottom: `1px solid ${T.border}`,
         }}>
-          {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <img src="/logo.png" alt="AuraLace" style={{ width: 36, height: 36, borderRadius: 9, objectFit: "contain" }} />
             <div>
@@ -398,8 +388,6 @@ export default function Home() {
               </p>
             </div>
           </div>
-
-          {/* Tech stack */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {["FastAPI", "Next.js", "Librosa", "NumPy", "SciPy"].map((tech) => (
               <span key={tech} style={{
@@ -410,8 +398,6 @@ export default function Home() {
               }}>{tech}</span>
             ))}
           </div>
-
-          {/* DSP tags */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
             <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
               Signal Processing
@@ -427,8 +413,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        {/* Bottom */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "18px 0",
