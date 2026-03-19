@@ -1,9 +1,9 @@
 export interface AudioParams {
-  pitch: number;
-  speed: number;
-  bass: number;
-  treble: number;
-  reverb: number;
+  pitch:    number;
+  speed:    number;
+  bass:     number;
+  treble:   number;
+  reverb:   number;
   loudness: number;
 }
 
@@ -15,11 +15,11 @@ export interface ProcessState {
 }
 
 export interface ProcessResponse {
-  url: string;
-  filename: string;
-  original_waveform: number[];
+  audio_b64:          string;   // base64-encoded WAV — replaces url/filename
+  filename:           string;
+  original_waveform:  number[];
   processed_waveform: number[];
-  duration_original: number;
+  duration_original:  number;
   duration_processed: number;
-  sample_rate: number;
+  sample_rate:        number;
 }

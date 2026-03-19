@@ -2,19 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ProcessResponse } from "@/types";
-import { getMediaUrl } from "@/utils/api";
 
 interface Props {
   result: ProcessResponse;
 }
 
 export default function ResultPanel({ result }: Props) {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const audioRef   = useRef<HTMLAudioElement>(null);
+  const [playing,     setPlaying]     = useState(false);
+  const [progress,    setProgress]    = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [audioReady,  setAudioReady]  = useState(false);
 
-  const audioUrl = getMediaUrl(result.url);
+  // audio_b64 is now a blob URL created in api.ts — works forever in this session
+  const audioUrl = result.audio_b64;
 
   const T = {
     green:       "#1a4731",
@@ -22,46 +23,53 @@ export default function ResultPanel({ result }: Props) {
     greenLight:  "#52b788",
     greenTint:   "#f2faf6",
     borderGreen: "#b7dfc8",
-    purple:      "#5b3fa0",
-    border:      "#e2ddf5",
     muted:       "#9a9a9a",
     secondary:   "#3a3a3a",
   };
 
+  // Reset only when the audio URL actually changes (new result)
   useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
     setPlaying(false);
     setProgress(0);
     setCurrentTime(0);
-  }, [result]);
+    setAudioReady(false);
+  }, [audioUrl]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
     if (playing) {
       audio.pause();
+      setPlaying(false);
     } else {
       audio.play();
+      setPlaying(true);
     }
-    setPlaying(!playing);
   };
 
   const handleTimeUpdate = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !isFinite(audio.duration) || audio.duration === 0) return;
     setCurrentTime(audio.currentTime);
     setProgress((audio.currentTime / audio.duration) * 100);
   };
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
-    if (!audio) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
+    if (!audio || !isFinite(audio.duration) || audio.duration === 0) return;
+    const rect  = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     audio.currentTime = ratio * audio.duration;
   };
 
   const formatTime = (s: number) => {
-    const m = Math.floor(s / 60);
+    if (!isFinite(s) || s < 0) return "0:00";
+    const m   = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
@@ -71,8 +79,13 @@ export default function ResultPanel({ result }: Props) {
       <audio
         ref={audioRef}
         src={audioUrl}
+        onLoadedMetadata={() => setAudioReady(true)}
         onTimeUpdate={handleTimeUpdate}
-        onEnded={() => { setPlaying(false); setProgress(0); }}
+        onEnded={() => {
+          setPlaying(false);
+          setProgress(0);
+          setCurrentTime(0);
+        }}
       />
 
       {/* Header */}
@@ -94,8 +107,6 @@ export default function ResultPanel({ result }: Props) {
 
       {/* Player */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
-
-        {/* Play / Pause button */}
         <button
           onClick={togglePlay}
           style={{
@@ -119,14 +130,14 @@ export default function ResultPanel({ result }: Props) {
           )}
         </button>
 
-        {/* Progress bar */}
         <div style={{ flex: 1 }}>
           <div
             onClick={handleSeek}
             style={{
               height: 6, borderRadius: 99,
               background: "#f0ecfb",
-              cursor: "pointer", position: "relative", overflow: "hidden",
+              cursor: audioReady ? "pointer" : "default",
+              position: "relative", overflow: "hidden",
             }}
           >
             <div style={{
@@ -149,13 +160,11 @@ export default function ResultPanel({ result }: Props) {
       </div>
 
       {/* Metadata row */}
-      <div style={{
-        display: "flex", gap: 8, marginBottom: 16,
-      }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Sample rate", value: `${(result.sample_rate / 1000).toFixed(1)} kHz` },
-          { label: "Duration",    value: `${result.duration_processed.toFixed(2)}s` },
-          { label: "Format",      value: "WAV · float32" },
+          { label: "Duration",    value: `${result.duration_processed.toFixed(2)}s`       },
+          { label: "Format",      value: "WAV · float32"                                  },
         ].map(({ label, value }) => (
           <div key={label} style={{
             flex: 1, background: T.greenTint,
@@ -172,7 +181,7 @@ export default function ResultPanel({ result }: Props) {
         ))}
       </div>
 
-      {/* Download button */}
+      {/* Download — uses the blob URL directly, triggers browser save */}
       <a
         href={audioUrl}
         download={result.filename}
