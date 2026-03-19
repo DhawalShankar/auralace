@@ -24,7 +24,6 @@ const T = {
   greenLight:  "#52b788",
   purple:      "#5b3fa0",
   purpleMid:   "#7c5cbf",
-  purpleLight: "#a78bda",
   white:       "#ffffff",
   offWhite:    "#f8f7fc",
   greenTint:   "#f2faf6",
@@ -70,20 +69,27 @@ export default function Home() {
     setMenuOpen(false);
   };
 
+  const apiDot = (
+    <div style={{
+      width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+      background: apiChecking ? "#d1d5db" : apiLive ? "#22c55e" : "#ef4444",
+      boxShadow: apiLive && !apiChecking ? "0 0 6px #22c55e88" : "none",
+    }} />
+  );
+
   return (
     <>
       <style>{`
         * { box-sizing: border-box; }
 
-        .nav-links { display: flex; align-items: center; gap: 36px; }
-        .nav-status { display: flex; align-items: center; gap: 16px; }
-        .hamburger { display: none; }
+        /* ── Navbar ── */
+        .nav-desktop-links { display: flex; align-items: center; gap: 36px; }
+        .nav-desktop-status { display: flex; align-items: center; gap: 16px; }
+        .nav-mobile-right { display: none; }
         .mobile-menu { display: none; }
 
-        .section-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-        }
+        /* ── Sections ── */
+        .section-grid { display: grid; grid-template-columns: 1fr 1fr; }
         .col-left {
           padding: 72px 56px 72px 72px;
           border-right: 1px solid ${T.border};
@@ -94,48 +100,37 @@ export default function Home() {
           background: linear-gradient(150deg, ${T.purpleTint} 0%, ${T.greenTint} 100%);
           display: flex; flex-direction: column; justify-content: center;
         }
-        .col-left-start { justify-content: flex-start; }
+        .col-start { justify-content: flex-start; }
 
+        /* ── Typography ── */
         .hero-h1 {
           font-family: 'Syne', sans-serif;
           font-size: clamp(44px, 5vw, 70px);
-          font-weight: 800; line-height: 1.05;
-          letter-spacing: -0.02em;
+          font-weight: 800; line-height: 1.05; letter-spacing: -0.02em;
         }
         .section-h2 {
           font-family: 'Syne', sans-serif;
           font-size: 32px; font-weight: 800;
-          color: ${T.primary}; margin-bottom: 36px;
-          letter-spacing: -0.02em;
+          color: ${T.primary}; margin-bottom: 36px; letter-spacing: -0.02em;
         }
 
-        .footer-inner {
-          display: flex; align-items: center;
-          justify-content: space-between;
-          padding: 40px 0 32px;
-          border-bottom: 1px solid ${T.border};
+        /* ── Footer ── */
+        .footer-outer { padding: 0 72px; }
+        .footer-top {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 40px 0 32px; border-bottom: 1px solid ${T.border};
+          gap: 24px;
         }
         .footer-bottom {
-          display: flex; align-items: center;
-          justify-content: space-between;
+          display: flex; align-items: center; justify-content: space-between;
           padding: 18px 0;
         }
-        .footer-wrap { padding: 0 72px; }
 
-        .sliders-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 28px 40px;
-        }
-        .sliders-right-col {
-          border-left: 1px solid #f0ecfb;
-          padding-left: 32px;
-        }
-
+        /* ── Mobile ── */
         @media (max-width: 767px) {
-          .nav-links { display: none; }
-          .nav-status { display: none; }
-          .hamburger { display: flex; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+          .nav-desktop-links { display: none !important; }
+          .nav-desktop-status { display: none !important; }
+          .nav-mobile-right { display: flex; align-items: center; gap: 10px; }
           .mobile-menu.open { display: flex; flex-direction: column; }
 
           .section-grid { grid-template-columns: 1fr; }
@@ -146,43 +141,36 @@ export default function Home() {
           }
           .col-right { padding: 40px 20px; }
 
-          .hero-h1 { font-size: clamp(34px, 9vw, 52px); }
-          .section-h2 { font-size: 24px; margin-bottom: 24px; }
+          .hero-h1 { font-size: clamp(32px, 9vw, 48px); }
+          .section-h2 { font-size: 24px; margin-bottom: 20px; }
 
-          .footer-inner { flex-direction: column; align-items: flex-start; gap: 20px; padding: 28px 0; }
+          .footer-outer { padding: 0 20px; }
+          .footer-top { flex-direction: column; align-items: flex-start; padding: 28px 0; }
           .footer-bottom { flex-direction: column; align-items: flex-start; gap: 8px; }
-          .footer-wrap { padding: 0 20px; }
-
-          .sliders-grid { grid-template-columns: 1fr; gap: 24px; }
-          .sliders-right-col { border-left: none; padding-left: 0; border-top: 1px solid #f0ecfb; padding-top: 24px; }
         }
       `}</style>
 
       <div style={{ fontFamily: "'DM Mono', monospace", background: T.white, minHeight: "100vh", color: T.primary }}>
 
-        {/* NAVBAR */}
+        {/* ── NAVBAR ── */}
         <nav style={{
           position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
           background: "rgba(255,255,255,0.97)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
+          backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
           borderBottom: `1px solid ${T.border}`,
-          padding: "0 24px",
-          height: 60,
+          padding: "0 32px", height: 60,
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          {/* Logo */}
+          {/* Logo — always visible */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/logo.png" alt="AuraLace" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }} />
-            <div>
-              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: "0.04em", color: T.primary }}>
-                AURA<span style={{ color: T.green }}>LACE</span>
-              </span>
-            </div>
+            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: "0.04em", color: T.primary }}>
+              AURA<span style={{ color: T.green }}>LACE</span>
+            </span>
           </div>
 
-          {/* Desktop nav */}
-          <div className="nav-links">
+          {/* Desktop: nav links (hidden on mobile via CSS) */}
+          <div className="nav-desktop-links">
             {["Studio", "Parameters", "Output"].map((item) => {
               const id = item.toLowerCase();
               const isActive = activeNav === id;
@@ -192,8 +180,8 @@ export default function Home() {
                   onMouseLeave={(e) => (e.currentTarget.style.color = isActive ? T.green : T.tertiary)}
                   style={{
                     fontSize: 12, color: isActive ? T.green : T.tertiary,
-                    fontWeight: isActive ? 600 : 400,
-                    letterSpacing: "0.04em", cursor: "pointer",
+                    fontWeight: isActive ? 600 : 400, letterSpacing: "0.04em",
+                    cursor: "pointer",
                     borderBottom: isActive ? `1.5px solid ${T.green}` : "1.5px solid transparent",
                     paddingBottom: 2, transition: "color 0.2s",
                   }}>{item}</span>
@@ -201,14 +189,10 @@ export default function Home() {
             })}
           </div>
 
-          {/* Desktop status */}
-          <div className="nav-status">
+          {/* Desktop: status + version (hidden on mobile via CSS) */}
+          <div className="nav-desktop-status">
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <div style={{
-                width: 7, height: 7, borderRadius: "50%",
-                background: apiChecking ? "#d1d5db" : apiLive ? "#22c55e" : "#ef4444",
-                boxShadow: apiLive && !apiChecking ? "0 0 6px #22c55e88" : "none",
-              }} />
+              {apiDot}
               <span style={{ fontSize: 11, color: T.tertiary }}>
                 {apiChecking ? "Checking..." : apiLive ? "FastAPI · Librosa · NumPy" : "Backend offline"}
               </span>
@@ -221,15 +205,13 @@ export default function Home() {
             }}>v1.0</span>
           </div>
 
-          {/* Mobile right */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="hamburger-area">
-            <div style={{
-              width: 7, height: 7, borderRadius: "50%",
-              background: apiChecking ? "#d1d5db" : apiLive ? "#22c55e" : "#ef4444",
-              boxShadow: apiLive && !apiChecking ? "0 0 6px #22c55e88" : "none",
-            }} className="mobile-dot" />
-            <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", flexDirection: "column", gap: 5 }}>
+          {/* Mobile: dot + hamburger (hidden on desktop via CSS) */}
+          <div className="nav-mobile-right">
+            {apiDot}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", flexDirection: "column", gap: 5 }}
+            >
               {[0, 1, 2].map(i => (
                 <div key={i} style={{
                   width: 22, height: 2, borderRadius: 2, background: T.primary,
@@ -251,24 +233,20 @@ export default function Home() {
           background: T.white, borderBottom: `1px solid ${T.border}`,
           padding: "8px 24px 16px",
         }}>
-          {["Studio", "Parameters", "Output"].map((item) => {
-            const id = item.toLowerCase();
-            return (
-              <div key={item} onClick={() => scrollTo(id)} style={{
-                padding: "13px 0",
-                borderBottom: `1px solid ${T.border}`,
-                fontSize: 14, color: activeNav === id ? T.green : T.secondary,
-                fontWeight: activeNav === id ? 600 : 400,
-                cursor: "pointer", letterSpacing: "0.04em",
-              }}>{item}</div>
-            );
-          })}
+          {["Studio", "Parameters", "Output"].map((item) => (
+            <div key={item} onClick={() => scrollTo(item.toLowerCase())} style={{
+              padding: "13px 0", borderBottom: `1px solid ${T.border}`,
+              fontSize: 14, color: activeNav === item.toLowerCase() ? T.green : T.secondary,
+              fontWeight: activeNav === item.toLowerCase() ? 600 : 400,
+              cursor: "pointer", letterSpacing: "0.04em",
+            }}>{item}</div>
+          ))}
           <div style={{ paddingTop: 12, fontSize: 11, color: T.muted }}>
             {apiChecking ? "Checking..." : apiLive ? "✓ Backend online" : "✗ Backend offline"}
           </div>
         </div>
 
-        {/* HERO */}
+        {/* ══ HERO ══ */}
         <section id="studio" style={{ paddingTop: 60 }}>
           <div className="section-grid">
             <div className="col-left">
@@ -331,17 +309,17 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SECTION 2 — Sliders + Waveform */}
+        {/* ══ SECTION 2 — Sliders + Waveform ══ */}
         <section id="parameters" style={{ borderTop: `1px solid ${T.border}` }}>
           <div className="section-grid">
-            <div className="col-left col-left-start">
+            <div className="col-left col-start">
               <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.purpleMid, fontWeight: 600, marginBottom: 12 }}>
                 Step 2 — Configure
               </p>
               <h2 className="section-h2">DSP Parameters</h2>
               <ParameterSliders params={params} onChange={setParams} />
             </div>
-            <div className="col-right" style={{ justifyContent: "flex-start" }}>
+            <div className="col-right col-start">
               <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.tertiary, fontWeight: 600, marginBottom: 12 }}>
                 Visualization
               </p>
@@ -370,10 +348,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SECTION 3 — Summary + Result */}
+        {/* ══ SECTION 3 — Summary + Result ══ */}
         <section id="output" style={{ borderTop: `1px solid ${T.border}` }}>
           <div className="section-grid">
-            <div className="col-left col-left-start">
+            <div className="col-left col-start">
               <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.purpleMid, fontWeight: 600, marginBottom: 12 }}>
                 Step 3 — Process
               </p>
@@ -401,7 +379,7 @@ export default function Home() {
               <ProcessButton state={state} disabled={!file} onClick={handleProcess} />
             </div>
 
-            <div className="col-right" style={{ justifyContent: "flex-start" }}>
+            <div className="col-right col-start">
               <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.tertiary, fontWeight: 600, marginBottom: 12 }}>
                 Output
               </p>
@@ -427,9 +405,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer style={{ borderTop: `1px solid ${T.border}`, background: T.white }} className="footer-wrap">
-          <div className="footer-inner">
+        {/* ── FOOTER ── */}
+        <footer style={{ borderTop: `1px solid ${T.border}`, background: T.white }} className="footer-outer">
+          <div className="footer-top">
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img src="/logo.png" alt="AuraLace" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }} />
               <div>
@@ -437,7 +415,7 @@ export default function Home() {
                 <p style={{ fontSize: 10, color: T.muted, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>Premium Signal Studio</p>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {["FastAPI", "Next.js", "Librosa", "NumPy", "SciPy"].map((tech) => (
                 <span key={tech} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 99, border: `1px solid ${T.border}`, color: T.tertiary, background: T.offWhite }}>{tech}</span>
               ))}
