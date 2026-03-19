@@ -15,9 +15,7 @@ const defaultParams: AudioParams = {
   treble: 0, reverb: 0, loudness: 0,
 };
 
-// Keep in sync with backend MAX_FILE_BYTES and MAX_DURATION_SECS
-const MAX_FILE_BYTES    = 15 * 1024 * 1024; // 15 MB
-const MAX_DURATION_SECS = 300;              // 5 minutes
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
 const T = {
   primary:     "#0a0a0a",
@@ -57,17 +55,14 @@ export default function Home() {
 
   const handleProcess = async () => {
     if (!file) return;
-
-    // ── Client-side validation — catch obvious errors before hitting the backend ──
     if (file.size > MAX_FILE_BYTES) {
-      setState({ status: "error", error: `File too large. Maximum size is 15MB.` });
+      setState({ status: "error", error: "File too large. Maximum size is 15MB." });
       return;
     }
     if (!file.type.startsWith("audio/") && !file.name.endsWith(".wav") && !file.name.endsWith(".mp3")) {
       setState({ status: "error", error: "Only WAV and MP3 files are supported." });
       return;
     }
-
     setState({ status: "uploading" });
     try {
       await new Promise((res) => setTimeout(res, 400));
@@ -98,29 +93,42 @@ export default function Home() {
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; }
 
+        /* ── Navbar ── */
         .nav-desktop-links { display: flex; align-items: center; gap: 36px; }
         .nav-desktop-status { display: flex; align-items: center; gap: 16px; }
         .nav-mobile-right { display: none; }
         .mobile-menu { display: none; }
 
+        /* ── Section grid ── */
         .section-grid { display: grid; grid-template-columns: 1fr 1fr; }
+
         .col-left {
           padding: 72px 56px 72px 72px;
           border-right: 1px solid ${T.border};
           display: flex; flex-direction: column; justify-content: center;
+          min-width: 0; /* prevents overflow */
         }
         .col-right {
           padding: 72px 72px 72px 56px;
           background: linear-gradient(150deg, ${T.purpleTint} 0%, ${T.greenTint} 100%);
           display: flex; flex-direction: column; justify-content: center;
+          min-width: 0;
         }
         .col-start { justify-content: flex-start; }
 
+        /* ── Stats row ── */
+        .stats-row {
+          display: flex;
+          gap: 32px;
+          flex-wrap: wrap;
+        }
+
+        /* ── Typography ── */
         .hero-h1 {
           font-family: 'Syne', sans-serif;
-          font-size: clamp(44px, 5vw, 70px);
+          font-size: clamp(36px, 5vw, 70px);
           font-weight: 800; line-height: 1.05; letter-spacing: -0.02em;
         }
         .section-h2 {
@@ -129,41 +137,48 @@ export default function Home() {
           color: ${T.primary}; margin-bottom: 36px; letter-spacing: -0.02em;
         }
 
+        /* ── Footer ── */
         .footer-outer { padding: 0 72px; }
         .footer-top {
           display: flex; align-items: center; justify-content: space-between;
           padding: 40px 0 32px; border-bottom: 1px solid ${T.border};
-          gap: 24px;
+          gap: 24px; flex-wrap: wrap;
         }
         .footer-bottom {
           display: flex; align-items: center; justify-content: space-between;
           padding: 18px 0;
         }
 
+        /* ── Mobile ── */
         @media (max-width: 767px) {
-          .nav-desktop-links { display: none !important; }
+          .nav-desktop-links  { display: none !important; }
           .nav-desktop-status { display: none !important; }
-          .nav-mobile-right { display: flex; align-items: center; gap: 10px; }
-          .mobile-menu.open { display: flex; flex-direction: column; }
+          .nav-mobile-right   { display: flex; align-items: center; gap: 10px; }
+          .mobile-menu.open   { display: flex; flex-direction: column; }
 
           .section-grid { grid-template-columns: 1fr; }
+
           .col-left {
-            padding: 40px 20px;
+            padding: 36px 20px !important;
             border-right: none;
             border-bottom: 1px solid ${T.border};
           }
-          .col-right { padding: 40px 20px; }
+          .col-right {
+            padding: 36px 20px !important;
+          }
 
-          .hero-h1 { font-size: clamp(32px, 9vw, 48px); }
-          .section-h2 { font-size: 24px; margin-bottom: 20px; }
+          .hero-h1   { font-size: clamp(28px, 8vw, 44px) !important; }
+          .section-h2 { font-size: 22px !important; margin-bottom: 20px !important; }
+
+          .stats-row { gap: 16px; }
 
           .footer-outer { padding: 0 20px; }
-          .footer-top { flex-direction: column; align-items: flex-start; padding: 28px 0; }
+          .footer-top   { flex-direction: column; align-items: flex-start; padding: 24px 0; }
           .footer-bottom { flex-direction: column; align-items: flex-start; gap: 8px; }
         }
       `}</style>
 
-      <div style={{ fontFamily: "'DM Mono', monospace", background: T.white, minHeight: "100vh", color: T.primary }}>
+      <div style={{ fontFamily: "'DM Mono', monospace", background: T.white, minHeight: "100vh", color: T.primary, overflowX: "hidden" }}>
 
         {/* ── NAVBAR ── */}
         <nav style={{
@@ -171,7 +186,7 @@ export default function Home() {
           background: "rgba(255,255,255,0.97)",
           backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
           borderBottom: `1px solid ${T.border}`,
-          padding: "0 32px", height: 60,
+          padding: "0 24px", height: 60,
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -276,15 +291,14 @@ export default function Home() {
                 Upload a song, a voice recording, or a podcast clip — and hear the difference instantly.
               </p>
 
-              {/* Feature pills — plain English */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 32 }}>
                 {[
-                  { label: "Pitch control",   green: true  },
-                  { label: "Speed control",   green: true  },
-                  { label: "Bass boost",       green: false },
-                  { label: "Treble boost",     green: false },
-                  { label: "Reverb",           green: true  },
-                  { label: "Loudness adjust",  green: false },
+                  { label: "Pitch control",  green: true  },
+                  { label: "Speed control",  green: true  },
+                  { label: "Bass boost",     green: false },
+                  { label: "Treble boost",   green: false },
+                  { label: "Reverb",         green: true  },
+                  { label: "Loudness adjust",green: false },
                 ].map(({ label, green }) => (
                   <span key={label} style={{
                     fontSize: 10, padding: "4px 11px", borderRadius: 99,
@@ -295,13 +309,13 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Stats — corrected limits */}
-              <div style={{ display: "flex", gap: 32 }}>
+              {/* Stats — use className so mobile CSS can target gap */}
+              <div className="stats-row">
                 {[
                   { num: "6",    label: "Audio controls"  },
                   { num: "15MB", label: "Max file size"    },
                   { num: "5min", label: "Max audio length" },
-                  { num: "WAV",  label: "Output format"   },
+                  { num: "WAV",  label: "Output format"    },
                 ].map(({ num, label }) => (
                   <div key={label}>
                     <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: T.green, marginBottom: 4 }}>{num}</p>
@@ -319,8 +333,7 @@ export default function Home() {
                 <AudioUploader onFileSelect={setFile} selectedFile={file} />
               </div>
 
-              {/* Limit hints under uploader */}
-              <div style={{ marginTop: 10, display: "flex", gap: 16, justifyContent: "center" }}>
+              <div style={{ marginTop: 10, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
                 {[
                   { icon: "📁", text: "WAV or MP3 only" },
                   { icon: "⚖️", text: "Max 15 MB"       },
@@ -393,12 +406,12 @@ export default function Home() {
               <h2 className="section-h2">Your Settings</h2>
               <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 20 }}>
                 {[
-                  { label: "Pitch shift",    value: `${params.pitch > 0 ? "+" : ""}${params.pitch} semitones`, green: true  },
-                  { label: "Speed",          value: `${params.speed.toFixed(2)}×`,                             green: true  },
-                  { label: "Bass boost",     value: `+${params.bass} dB`,                                      green: false },
-                  { label: "Treble boost",   value: `+${params.treble} dB`,                                    green: true  },
-                  { label: "Reverb",         value: `${params.reverb}%`,                                       green: false },
-                  { label: "Loudness",       value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`,  green: true  },
+                  { label: "Pitch shift",  value: `${params.pitch > 0 ? "+" : ""}${params.pitch} semitones`, green: true  },
+                  { label: "Speed",        value: `${params.speed.toFixed(2)}×`,                             green: true  },
+                  { label: "Bass boost",   value: `+${params.bass} dB`,                                      green: false },
+                  { label: "Treble boost", value: `+${params.treble} dB`,                                    green: true  },
+                  { label: "Reverb",       value: `${params.reverb}%`,                                       green: false },
+                  { label: "Loudness",     value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`,  green: true  },
                 ].map((row, i, arr) => (
                   <div key={row.label} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -458,7 +471,6 @@ export default function Home() {
               ))}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {/* Limits reminder in footer */}
               <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>File Limits</span>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {["WAV · MP3", "Max 15 MB", "Max 5 min"].map((tag) => (
