@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import AudioUploader from "@/components/AudioUploader";
 import ParameterSliders from "@/components/ParameterSliders";
 import ProcessButton from "@/components/ProcessButton";
+import ProcessingProgress from "@/components/ProcessingProgress";
 import WaveformCanvas from "@/components/WaveForm";
 import ResultPanel from "@/components/ResultPanel";
 import { AudioParams, ProcessResponse, ProcessState } from "@/types";
@@ -52,10 +53,16 @@ export default function Home() {
 
   const handleProcess = async () => {
     if (!file) return;
-    setState({ status: "processing" });
+    // Step 1: uploading — triggers 0→15% animation in ProcessingProgress
+    setState({ status: "uploading" });
     try {
+      // Small delay so the uploading phase is visible before switching to processing
+      await new Promise((res) => setTimeout(res, 400));
+      // Step 2: processing — triggers 15→90% asymptotic animation
+      setState({ status: "processing" });
       const data = await processAudio(file, params);
       setResult(data);
+      // Step 3: done — snaps to 100%, fades out
       setState({ status: "done" });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Something went wrong";
@@ -161,7 +168,7 @@ export default function Home() {
           padding: "0 32px", height: 60,
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          {/* Logo — always visible */}
+          {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/logo.png" alt="AuraLace" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }} />
             <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: "0.04em", color: T.primary }}>
@@ -169,7 +176,7 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Desktop: nav links (hidden on mobile via CSS) */}
+          {/* Desktop nav links */}
           <div className="nav-desktop-links">
             {["Studio", "Parameters", "Output"].map((item) => {
               const id = item.toLowerCase();
@@ -189,7 +196,7 @@ export default function Home() {
             })}
           </div>
 
-          {/* Desktop: status + version (hidden on mobile via CSS) */}
+          {/* Desktop status + version */}
           <div className="nav-desktop-status">
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
               {apiDot}
@@ -205,7 +212,7 @@ export default function Home() {
             }}>v1.0</span>
           </div>
 
-          {/* Mobile: dot + hamburger (hidden on desktop via CSS) */}
+          {/* Mobile: dot + hamburger */}
           <div className="nav-mobile-right">
             {apiDot}
             <button
@@ -376,7 +383,10 @@ export default function Home() {
                   </div>
                 ))}
               </div>
+
+              {/* ProcessButton + progress bar stacked together */}
               <ProcessButton state={state} disabled={!file} onClick={handleProcess} />
+              <ProcessingProgress status={state.status} />
             </div>
 
             <div className="col-right col-start">
