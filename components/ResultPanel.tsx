@@ -16,6 +16,18 @@ export default function ResultPanel({ result }: Props) {
 
   const audioUrl = getMediaUrl(result.url);
 
+  const T = {
+    green:       "#1a4731",
+    greenMid:    "#2d6a4f",
+    greenLight:  "#52b788",
+    greenTint:   "#f2faf6",
+    borderGreen: "#b7dfc8",
+    purple:      "#5b3fa0",
+    border:      "#e2ddf5",
+    muted:       "#9a9a9a",
+    secondary:   "#3a3a3a",
+  };
+
   useEffect(() => {
     setPlaying(false);
     setProgress(0);
@@ -55,86 +67,135 @@ export default function ResultPanel({ result }: Props) {
   };
 
   return (
-    <div className="card p-6 opacity-0 animate-fade-up delay-500 border-(--cyan) shadow-[0_0_30px_var(--cyan-glow)]">
+    <div style={{ padding: 24 }}>
       <audio
         ref={audioRef}
         src={audioUrl}
         onTimeUpdate={handleTimeUpdate}
-        onEnded={() => {
-          setPlaying(false);
-          setProgress(0);
-        }}
+        onEnded={() => { setPlaying(false); setProgress(0); }}
       />
 
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="font-display text-sm font-semibold tracking-[0.2em] uppercase text-(--cyan)">
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <span style={{
+          fontFamily: "'Syne', sans-serif",
+          fontSize: 11, fontWeight: 700,
+          letterSpacing: "0.2em", textTransform: "uppercase",
+          color: T.green,
+        }}>
           Processed Output
-        </h2>
-        <div className="flex items-center gap-2 text-xs text-(--text-muted) font-mono">
-          <span>{result.sample_rate / 1000}kHz</span>
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'DM Mono', monospace", fontSize: 11, color: T.muted }}>
+          <span>{(result.sample_rate / 1000).toFixed(1)}kHz</span>
           <span>·</span>
           <span>{result.duration_processed.toFixed(2)}s</span>
         </div>
       </div>
 
       {/* Player */}
-      <div className="flex items-center gap-4 mb-4">
-        {/* Play button */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+
+        {/* Play / Pause button */}
         <button
           onClick={togglePlay}
-          className="w-12 h-12 rounded-full border border-(--cyan) flex items-center justify-center text-(--cyan) hover:bg-(--cyan-glow) transition-all shrink-0 animate-pulse-glow"
+          style={{
+            width: 48, height: 48, borderRadius: "50%",
+            border: `1.5px solid ${T.greenLight}`,
+            background: playing ? T.greenTint : "white",
+            color: T.green,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", flexShrink: 0,
+            transition: "background 0.2s",
+          }}
         >
           {playing ? (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <svg width="18" height="18" fill={T.green} viewBox="0 0 24 24">
               <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
             </svg>
           ) : (
-            <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+            <svg width="18" height="18" fill={T.green} viewBox="0 0 24 24" style={{ marginLeft: 2 }}>
               <path d="M8 5v14l11-7z" />
             </svg>
           )}
         </button>
 
         {/* Progress bar */}
-        <div className="flex-1">
+        <div style={{ flex: 1 }}>
           <div
-            className="h-1.5 bg-(--border) rounded-full cursor-pointer relative overflow-hidden"
             onClick={handleSeek}
+            style={{
+              height: 6, borderRadius: 99,
+              background: "#f0ecfb",
+              cursor: "pointer", position: "relative", overflow: "hidden",
+            }}
           >
-            <div
-              className="absolute inset-y-0 left-0 bg-(--cyan) rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
+            <div style={{
+              position: "absolute", inset: 0, right: "auto",
+              width: `${progress}%`,
+              background: `linear-gradient(90deg, ${T.green}, ${T.greenLight})`,
+              borderRadius: 99,
+              transition: "width 0.1s linear",
+            }} />
           </div>
-          <div className="flex justify-between mt-1">
-            <span className="font-mono text-[10px] text-(--text-muted)">
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: T.muted }}>
               {formatTime(currentTime)}
             </span>
-            <span className="font-mono text-[10px] text-(--text-muted)">
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: T.muted }}>
               {formatTime(result.duration_processed)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Download */}
+      {/* Metadata row */}
+      <div style={{
+        display: "flex", gap: 8, marginBottom: 16,
+      }}>
+        {[
+          { label: "Sample rate", value: `${(result.sample_rate / 1000).toFixed(1)} kHz` },
+          { label: "Duration",    value: `${result.duration_processed.toFixed(2)}s` },
+          { label: "Format",      value: "WAV · float32" },
+        ].map(({ label, value }) => (
+          <div key={label} style={{
+            flex: 1, background: T.greenTint,
+            border: `1px solid ${T.borderGreen}`,
+            borderRadius: 8, padding: "8px 12px",
+          }}>
+            <div style={{ fontSize: 9, color: T.greenMid, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>
+              {label}
+            </div>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, fontWeight: 600, color: T.green }}>
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Download button */}
       <a
         href={audioUrl}
         download={result.filename}
-        className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-(--border) text-(--text-secondary) hover:border-(--cyan) hover:text-(--cyan) hover:bg-(--cyan-glow) transition-all text-sm font-display font-semibold tracking-wider uppercase"
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          width: "100%", padding: "12px 0",
+          borderRadius: 10,
+          border: `1.5px solid ${T.borderGreen}`,
+          background: T.green,
+          color: "white",
+          fontFamily: "'Syne', sans-serif",
+          fontSize: 12, fontWeight: 700,
+          letterSpacing: "0.12em", textTransform: "uppercase",
+          textDecoration: "none",
+          cursor: "pointer",
+          transition: "background 0.2s",
+          boxSizing: "border-box",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = T.greenMid)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = T.green)}
       >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-          />
+        <svg width="16" height="16" fill="none" stroke="white" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
         Download WAV
       </a>
