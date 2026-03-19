@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AudioUploader from "@/components/AudioUploader";
 import ParameterSliders from "@/components/ParameterSliders";
 import ProcessButton from "@/components/ProcessButton";
@@ -14,12 +14,42 @@ const defaultParams: AudioParams = {
   treble: 0, reverb: 0, loudness: 0,
 };
 
+const T = {
+  primary:     "#0a0a0a",
+  secondary:   "#3a3a3a",
+  tertiary:    "#6b6b6b",
+  muted:       "#9a9a9a",
+  green:       "#1a4731",
+  greenMid:    "#2d6a4f",
+  greenLight:  "#52b788",
+  purple:      "#5b3fa0",
+  purpleMid:   "#7c5cbf",
+  purpleLight: "#a78bda",
+  white:       "#ffffff",
+  offWhite:    "#f8f7fc",
+  greenTint:   "#f2faf6",
+  purpleTint:  "#f4f0fc",
+  border:      "#e2ddf5",
+  borderGreen: "#b7dfc8",
+};
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [params, setParams] = useState<AudioParams>(defaultParams);
   const [state, setState] = useState<ProcessState>({ status: "idle" });
   const [result, setResult] = useState<ProcessResponse | null>(null);
   const [activeNav, setActiveNav] = useState("studio");
+  const [apiLive, setApiLive] = useState(false);
+  const [apiChecking, setApiChecking] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    fetch(`${BASE_URL}/`)
+      .then((r) => { if (r.ok) setApiLive(true); })
+      .catch(() => setApiLive(false))
+      .finally(() => setApiChecking(false));
+  }, []);
 
   const handleProcess = async () => {
     if (!file) return;
@@ -37,394 +67,400 @@ export default function Home() {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setActiveNav(id);
-  };
-
-  const T = {
-    primary:     "#0a0a0a",
-    secondary:   "#3a3a3a",
-    tertiary:    "#6b6b6b",
-    muted:       "#9a9a9a",
-    green:       "#1a4731",
-    greenMid:    "#2d6a4f",
-    greenLight:  "#52b788",
-    purple:      "#5b3fa0",
-    purpleMid:   "#7c5cbf",
-    purpleLight: "#a78bda",
-    white:       "#ffffff",
-    offWhite:    "#f8f7fc",
-    greenTint:   "#f2faf6",
-    purpleTint:  "#f4f0fc",
-    border:      "#e2ddf5",
-    borderGreen: "#b7dfc8",
-  };
-
-  const sectionLeft: React.CSSProperties = {
-    padding: "72px 56px 72px 72px",
-    borderRight: `1px solid ${T.border}`,
-    display: "flex", flexDirection: "column", justifyContent: "center",
-  };
-  const sectionRight: React.CSSProperties = {
-    padding: "72px 72px 72px 56px",
-    background: `linear-gradient(150deg, ${T.purpleTint} 0%, ${T.greenTint} 100%)`,
-    display: "flex", flexDirection: "column", justifyContent: "center",
-  };
-  const eyebrow: React.CSSProperties = {
-    fontSize: 10, letterSpacing: "0.35em",
-    textTransform: "uppercase", color: T.purpleMid,
-    fontWeight: 600, marginBottom: 12,
-  };
-  const sectionTitle: React.CSSProperties = {
-    fontFamily: "'Syne', sans-serif",
-    fontSize: 32, fontWeight: 800,
-    color: T.primary, marginBottom: 36,
-    letterSpacing: "-0.02em",
+    setMenuOpen(false);
   };
 
   return (
-    <div style={{ fontFamily: "'DM Mono', monospace", background: T.white, minHeight: "100vh", color: T.primary }}>
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
 
-      {/* NAVBAR */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        background: "rgba(255,255,255,0.95)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${T.border}`,
-        padding: "0 64px", height: 68,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <img src="/logo.png" alt="AuraLace" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "contain" }} />
-          <div>
-            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 19, letterSpacing: "0.04em", color: T.primary }}>
-              AURA<span style={{ color: T.green }}>LACE</span>
-            </span>
-            <p style={{ fontSize: 9, color: T.muted, letterSpacing: "0.2em", textTransform: "uppercase", marginTop: 1 }}>
-              Premium Signal Studio
-            </p>
+        .nav-links { display: flex; align-items: center; gap: 36px; }
+        .nav-status { display: flex; align-items: center; gap: 16px; }
+        .hamburger { display: none; }
+        .mobile-menu { display: none; }
+
+        .section-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+        }
+        .col-left {
+          padding: 72px 56px 72px 72px;
+          border-right: 1px solid ${T.border};
+          display: flex; flex-direction: column; justify-content: center;
+        }
+        .col-right {
+          padding: 72px 72px 72px 56px;
+          background: linear-gradient(150deg, ${T.purpleTint} 0%, ${T.greenTint} 100%);
+          display: flex; flex-direction: column; justify-content: center;
+        }
+        .col-left-start { justify-content: flex-start; }
+
+        .hero-h1 {
+          font-family: 'Syne', sans-serif;
+          font-size: clamp(44px, 5vw, 70px);
+          font-weight: 800; line-height: 1.05;
+          letter-spacing: -0.02em;
+        }
+        .section-h2 {
+          font-family: 'Syne', sans-serif;
+          font-size: 32px; font-weight: 800;
+          color: ${T.primary}; margin-bottom: 36px;
+          letter-spacing: -0.02em;
+        }
+
+        .footer-inner {
+          display: flex; align-items: center;
+          justify-content: space-between;
+          padding: 40px 0 32px;
+          border-bottom: 1px solid ${T.border};
+        }
+        .footer-bottom {
+          display: flex; align-items: center;
+          justify-content: space-between;
+          padding: 18px 0;
+        }
+        .footer-wrap { padding: 0 72px; }
+
+        .sliders-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 28px 40px;
+        }
+        .sliders-right-col {
+          border-left: 1px solid #f0ecfb;
+          padding-left: 32px;
+        }
+
+        @media (max-width: 767px) {
+          .nav-links { display: none; }
+          .nav-status { display: none; }
+          .hamburger { display: flex; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+          .mobile-menu.open { display: flex; flex-direction: column; }
+
+          .section-grid { grid-template-columns: 1fr; }
+          .col-left {
+            padding: 40px 20px;
+            border-right: none;
+            border-bottom: 1px solid ${T.border};
+          }
+          .col-right { padding: 40px 20px; }
+
+          .hero-h1 { font-size: clamp(34px, 9vw, 52px); }
+          .section-h2 { font-size: 24px; margin-bottom: 24px; }
+
+          .footer-inner { flex-direction: column; align-items: flex-start; gap: 20px; padding: 28px 0; }
+          .footer-bottom { flex-direction: column; align-items: flex-start; gap: 8px; }
+          .footer-wrap { padding: 0 20px; }
+
+          .sliders-grid { grid-template-columns: 1fr; gap: 24px; }
+          .sliders-right-col { border-left: none; padding-left: 0; border-top: 1px solid #f0ecfb; padding-top: 24px; }
+        }
+      `}</style>
+
+      <div style={{ fontFamily: "'DM Mono', monospace", background: T.white, minHeight: "100vh", color: T.primary }}>
+
+        {/* NAVBAR */}
+        <nav style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+          background: "rgba(255,255,255,0.97)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: `1px solid ${T.border}`,
+          padding: "0 24px",
+          height: 60,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src="/logo.png" alt="AuraLace" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }} />
+            <div>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, letterSpacing: "0.04em", color: T.primary }}>
+                AURA<span style={{ color: T.green }}>LACE</span>
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
+          {/* Desktop nav */}
+          <div className="nav-links">
+            {["Studio", "Parameters", "Output"].map((item) => {
+              const id = item.toLowerCase();
+              const isActive = activeNav === id;
+              return (
+                <span key={item} onClick={() => scrollTo(id)}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = T.green)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = isActive ? T.green : T.tertiary)}
+                  style={{
+                    fontSize: 12, color: isActive ? T.green : T.tertiary,
+                    fontWeight: isActive ? 600 : 400,
+                    letterSpacing: "0.04em", cursor: "pointer",
+                    borderBottom: isActive ? `1.5px solid ${T.green}` : "1.5px solid transparent",
+                    paddingBottom: 2, transition: "color 0.2s",
+                  }}>{item}</span>
+              );
+            })}
+          </div>
+
+          {/* Desktop status */}
+          <div className="nav-status">
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <div style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: apiChecking ? "#d1d5db" : apiLive ? "#22c55e" : "#ef4444",
+                boxShadow: apiLive && !apiChecking ? "0 0 6px #22c55e88" : "none",
+              }} />
+              <span style={{ fontSize: 11, color: T.tertiary }}>
+                {apiChecking ? "Checking..." : apiLive ? "FastAPI · Librosa · NumPy" : "Backend offline"}
+              </span>
+            </div>
+            <div style={{ width: 1, height: 20, background: T.border }} />
+            <span style={{
+              fontSize: 11, color: T.purple, fontWeight: 700,
+              border: `1px solid ${T.border}`, padding: "4px 14px",
+              borderRadius: 20, background: T.purpleTint, letterSpacing: "0.06em",
+            }}>v1.0</span>
+          </div>
+
+          {/* Mobile right */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="hamburger-area">
+            <div style={{
+              width: 7, height: 7, borderRadius: "50%",
+              background: apiChecking ? "#d1d5db" : apiLive ? "#22c55e" : "#ef4444",
+              boxShadow: apiLive && !apiChecking ? "0 0 6px #22c55e88" : "none",
+            }} className="mobile-dot" />
+            <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", flexDirection: "column", gap: 5 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{
+                  width: 22, height: 2, borderRadius: 2, background: T.primary,
+                  transition: "all 0.2s",
+                  transform: menuOpen
+                    ? i === 0 ? "rotate(45deg) translate(5px, 5px)"
+                    : i === 1 ? "scaleX(0)"
+                    : "rotate(-45deg) translate(5px, -5px)"
+                    : "none",
+                }} />
+              ))}
+            </button>
+          </div>
+        </nav>
+
+        {/* Mobile dropdown */}
+        <div className={`mobile-menu ${menuOpen ? "open" : ""}`} style={{
+          position: "fixed", top: 60, left: 0, right: 0, zIndex: 99,
+          background: T.white, borderBottom: `1px solid ${T.border}`,
+          padding: "8px 24px 16px",
+        }}>
           {["Studio", "Parameters", "Output"].map((item) => {
             const id = item.toLowerCase();
-            const isActive = activeNav === id;
             return (
-              <span
-                key={item}
-                onClick={() => scrollTo(id)}
-                onMouseEnter={(e) => (e.currentTarget.style.color = T.green)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = isActive ? T.green : T.tertiary)}
-                style={{
-                  fontSize: 12,
-                  color: isActive ? T.green : T.tertiary,
-                  fontWeight: isActive ? 600 : 400,
-                  letterSpacing: "0.04em",
-                  cursor: "pointer",
-                  borderBottom: isActive ? `1.5px solid ${T.green}` : "1.5px solid transparent",
-                  paddingBottom: 2,
-                  transition: "color 0.2s",
-                }}
-              >
-                {item}
-              </span>
+              <div key={item} onClick={() => scrollTo(id)} style={{
+                padding: "13px 0",
+                borderBottom: `1px solid ${T.border}`,
+                fontSize: 14, color: activeNav === id ? T.green : T.secondary,
+                fontWeight: activeNav === id ? 600 : 400,
+                cursor: "pointer", letterSpacing: "0.04em",
+              }}>{item}</div>
             );
           })}
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e88" }} />
-            <span style={{ fontSize: 11, color: T.tertiary }}>FastAPI · Librosa · NumPy</span>
-          </div>
-          <div style={{ width: 1, height: 20, background: T.border }} />
-          <span style={{
-            fontSize: 11, color: T.purple, fontWeight: 700,
-            border: `1px solid ${T.border}`,
-            padding: "4px 14px", borderRadius: 20,
-            background: T.purpleTint, letterSpacing: "0.06em",
-          }}>v1.0</span>
-        </div>
-      </nav>
-
-      {/* HERO */}
-      <section id="studio" style={{
-        minHeight: "100vh",
-        display: "grid", gridTemplateColumns: "1fr 1fr",
-        paddingTop: 68,
-      }}>
-        <div style={{ ...sectionLeft, justifyContent: "center" }}>
-          <p style={eyebrow}>Lace Your Audio · Premium Signal Experience</p>
-          <h1 style={{
-            fontFamily: "'Syne', sans-serif",
-            fontSize: "clamp(44px, 5vw, 70px)",
-            fontWeight: 800, lineHeight: 1.05,
-            color: T.primary, letterSpacing: "-0.02em",
-            marginBottom: 6,
-          }}>
-            Shape your
-          </h1>
-          <h1 style={{
-            fontFamily: "'Syne', sans-serif",
-            fontSize: "clamp(44px, 5vw, 70px)",
-            fontWeight: 800, lineHeight: 1.05,
-            color: T.green, letterSpacing: "-0.02em",
-            marginBottom: 36,
-            position: "relative", display: "inline-block",
-          }}>
-            audio.
-            <span style={{
-              position: "absolute", bottom: -8, left: 0, width: "75%",
-              height: 4, borderRadius: 2,
-              background: `linear-gradient(90deg, ${T.green}, ${T.purpleMid}, transparent)`,
-            }} />
-          </h1>
-          <p style={{ fontSize: 14, color: T.secondary, lineHeight: 2, maxWidth: 420, marginBottom: 40 }}>
-            Real-time pitch shifting, time stretching & bass boost —
-            powered by FFT, phase vocoder & frequency-domain filtering.
-          </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 52 }}>
-            {[
-              { label: "FFT",            green: true  },
-              { label: "Phase Vocoder",  green: true  },
-              { label: "Time-Stretch",   green: false },
-              { label: "Freq-Domain EQ", green: false },
-              { label: "Librosa",        green: true  },
-              { label: "NumPy · SciPy",  green: false },
-            ].map(({ label, green }) => (
-              <span key={label} style={{
-                fontSize: 11, padding: "5px 14px", borderRadius: 99,
-                border: `1px solid ${green ? T.borderGreen : T.border}`,
-                color: green ? T.green : T.purple,
-                background: green ? T.greenTint : T.purpleTint,
-                fontWeight: 500,
-              }}>{label}</span>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 48 }}>
-            {[
-              { num: "6",    label: "Signal transforms" },
-              { num: "50MB", label: "Max file size"     },
-              { num: "WAV",  label: "Output format"     },
-            ].map(({ num, label }) => (
-              <div key={label}>
-                <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, color: T.green, marginBottom: 4 }}>{num}</p>
-                <p style={{ fontSize: 11, color: T.muted, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</p>
-              </div>
-            ))}
+          <div style={{ paddingTop: 12, fontSize: 11, color: T.muted }}>
+            {apiChecking ? "Checking..." : apiLive ? "✓ Backend online" : "✗ Backend offline"}
           </div>
         </div>
 
-        <div style={{ ...sectionRight }}>
-          <p style={{ ...eyebrow, color: T.tertiary, marginBottom: 20 }}>Step 1 — Upload Your File</p>
-          <div style={{
-            background: T.white, borderRadius: 24,
-            border: `1px solid ${T.border}`,
-            boxShadow: "0 8px 48px rgba(91,63,160,0.10), 0 2px 8px rgba(0,0,0,0.04)",
-            overflow: "hidden",
-          }}>
-            <AudioUploader onFileSelect={setFile} selectedFile={file} />
-          </div>
-          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-              <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${T.border})` }} />
-              <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.2em", fontWeight: 600 }}>SCROLL TO CONFIGURE</span>
-              <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${T.border}, transparent)` }} />
-            </div>
-            <span onClick={() => scrollTo("parameters")} style={{ fontSize: 20, color: T.purpleMid, cursor: "pointer" }}>↓</span>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 2 — Sliders + Waveform */}
-      <section id="parameters" style={{
-        display: "grid", gridTemplateColumns: "1fr 1fr",
-        borderTop: `1px solid ${T.border}`,
-        minHeight: "85vh",
-      }}>
-        <div style={{ ...sectionLeft, justifyContent: "flex-start" }}>
-          <p style={eyebrow}>Step 2 — Configure</p>
-          <h2 style={sectionTitle}>DSP Parameters</h2>
-          <ParameterSliders params={params} onChange={setParams} />
-        </div>
-
-        <div style={{ ...sectionRight, justifyContent: "flex-start" }}>
-          <p style={{ ...eyebrow, color: T.tertiary }}>Visualization</p>
-          <h2 style={sectionTitle}>Waveform</h2>
-          {result ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <WaveformCanvas
-                data={result.original_waveform}
-                label="Original"
-                color="#52b788"
-                duration={result.duration_original}
-              />
-              <WaveformCanvas
-                data={result.processed_waveform}
-                label="Processed"
-                color="#a78bda"
-                duration={result.duration_processed}
-              />
-            </div>
-          ) : (
-            <div style={{
-              borderRadius: 20, background: T.white,
-              border: `1px solid ${T.border}`,
-              padding: "32px 24px",
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 3, width: "100%", justifyContent: "center" }}>
-                {Array.from({ length: 80 }).map((_, i) => (
-                  <div key={i} style={{
-                    width: 3, borderRadius: 3,
-                    height: `${Math.abs(Math.sin(i * 0.38) * Math.cos(i * 0.12)) * 80 + 8}px`,
-                    background: i % 3 === 0
-                      ? "rgba(91,63,160,0.25)"
-                      : i % 3 === 1
-                      ? "rgba(26,71,49,0.22)"
-                      : "rgba(82,183,136,0.2)",
-                  }} />
+        {/* HERO */}
+        <section id="studio" style={{ paddingTop: 60 }}>
+          <div className="section-grid">
+            <div className="col-left">
+              <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.purpleMid, fontWeight: 600, marginBottom: 12 }}>
+                Lace Your Audio · Premium Signal Experience
+              </p>
+              <h1 className="hero-h1" style={{ color: T.primary, marginBottom: 6 }}>Shape your</h1>
+              <h1 className="hero-h1" style={{ color: T.green, marginBottom: 28, position: "relative", display: "inline-block" }}>
+                audio.
+                <span style={{
+                  position: "absolute", bottom: -8, left: 0, width: "75%",
+                  height: 4, borderRadius: 2,
+                  background: `linear-gradient(90deg, ${T.green}, ${T.purpleMid}, transparent)`,
+                }} />
+              </h1>
+              <p style={{ fontSize: 13, color: T.secondary, lineHeight: 1.9, maxWidth: 420, marginBottom: 28, marginTop: 8 }}>
+                Real-time pitch shifting, time stretching & bass boost —
+                powered by FFT, phase vocoder & frequency-domain filtering.
+              </p>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 32 }}>
+                {[
+                  { label: "FFT", green: true }, { label: "Phase Vocoder", green: true },
+                  { label: "Time-Stretch", green: false }, { label: "Freq-Domain EQ", green: false },
+                  { label: "Librosa", green: true }, { label: "NumPy · SciPy", green: false },
+                ].map(({ label, green }) => (
+                  <span key={label} style={{
+                    fontSize: 10, padding: "4px 11px", borderRadius: 99,
+                    border: `1px solid ${green ? T.borderGreen : T.border}`,
+                    color: green ? T.green : T.purple,
+                    background: green ? T.greenTint : T.purpleTint, fontWeight: 500,
+                  }}>{label}</span>
                 ))}
               </div>
-              <p style={{ fontSize: 13, color: T.tertiary, fontWeight: 600, marginTop: 16 }}>Waveform will appear here</p>
-              <p style={{ fontSize: 12, color: T.muted }}>Process your audio to compare waveforms</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* SECTION 3 — Summary + Result */}
-      <section id="output" style={{
-        display: "grid", gridTemplateColumns: "1fr 1fr",
-        borderTop: `1px solid ${T.border}`,
-        minHeight: "55vh",
-      }}>
-        <div style={{ ...sectionLeft, justifyContent: "flex-start", gap: 0 }}>
-          <p style={eyebrow}>Step 3 — Process</p>
-          <h2 style={sectionTitle}>Applied Transforms</h2>
-          <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 24 }}>
-            {[
-              { label: "Pitch shift",  value: `${params.pitch > 0 ? "+" : ""}${params.pitch} st`,      green: true  },
-              { label: "Time stretch", value: `${params.speed.toFixed(2)}×`,                            green: true  },
-              { label: "Bass boost",   value: `+${params.bass} dB`,                                     green: false },
-              { label: "Treble boost", value: `+${params.treble} dB`,                                   green: true  },
-              { label: "Reverb",       value: `${params.reverb}%`,                                      green: false },
-              { label: "Loudness",     value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`, green: true  },
-            ].map((row, i, arr) => (
-              <div key={row.label} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "14px 22px",
-                background: i % 2 === 0 ? T.white : "#faf9fe",
-                borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : "none",
-              }}>
-                <span style={{ fontSize: 13, color: T.secondary }}>{row.label}</span>
-                <span style={{
-                  fontSize: 14, fontWeight: 700,
-                  fontFamily: "'Syne', sans-serif",
-                  color: row.green ? T.green : T.purple,
-                }}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-          <ProcessButton state={state} disabled={!file} onClick={handleProcess} />
-        </div>
-
-        <div style={{ ...sectionRight, justifyContent: "flex-start" }}>
-          <p style={{ ...eyebrow, color: T.tertiary }}>Output</p>
-          <h2 style={sectionTitle}>Processed Audio</h2>
-          {result ? (
-            <div style={{
-              background: T.white, borderRadius: 20,
-              border: `1px solid ${T.borderGreen}`,
-              boxShadow: "0 8px 40px rgba(26,71,49,0.10)",
-              overflow: "hidden",
-            }}>
-              <ResultPanel result={result} />
-            </div>
-          ) : (
-            <div style={{
-              borderRadius: 20, background: T.white,
-              border: `1px dashed ${T.border}`,
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              gap: 14, minHeight: 220,
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: 16,
-                background: `linear-gradient(135deg, ${T.greenTint}, ${T.purpleTint})`,
-                border: `1px solid ${T.border}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <svg width="24" height="24" fill="none" stroke={T.green} strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                </svg>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontSize: 14, color: T.tertiary, fontWeight: 600, marginBottom: 6 }}>No output yet</p>
-                <p style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>
-                  Upload a file, configure parameters<br />and hit Process Audio
-                </p>
+              <div style={{ display: "flex", gap: 32 }}>
+                {[{ num: "6", label: "Signal transforms" }, { num: "50MB", label: "Max file size" }, { num: "WAV", label: "Output format" }].map(({ num, label }) => (
+                  <div key={label}>
+                    <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: T.green, marginBottom: 4 }}>{num}</p>
+                    <p style={{ fontSize: 10, color: T.muted, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</p>
+                  </div>
+                ))}
               </div>
             </div>
-          )}
-        </div>
-      </section>
 
-      {/* FOOTER */}
-      <footer style={{ borderTop: `1px solid ${T.border}`, background: T.white, padding: "0 72px" }}>
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "40px 0 32px",
-          borderBottom: `1px solid ${T.border}`,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <img src="/logo.png" alt="AuraLace" style={{ width: 36, height: 36, borderRadius: 9, objectFit: "contain" }} />
-            <div>
-              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 800, color: T.green, letterSpacing: "0.08em" }}>
-                AURALACE
-              </span>
-              <p style={{ fontSize: 10, color: T.muted, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>
-                Premium Signal Studio
+            <div className="col-right">
+              <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.tertiary, fontWeight: 600, marginBottom: 20 }}>
+                Step 1 — Upload Your File
               </p>
+              <div style={{ background: T.white, borderRadius: 20, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+                <AudioUploader onFileSelect={setFile} selectedFile={file} />
+              </div>
+              <div style={{ marginTop: 28, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                  <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${T.border})` }} />
+                  <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.2em", fontWeight: 600 }}>SCROLL TO CONFIGURE</span>
+                  <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${T.border}, transparent)` }} />
+                </div>
+                <span onClick={() => scrollTo("parameters")} style={{ fontSize: 20, color: T.purpleMid, cursor: "pointer" }}>↓</span>
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {["FastAPI", "Next.js", "Librosa", "NumPy", "SciPy"].map((tech) => (
-              <span key={tech} style={{
-                fontSize: 10, padding: "4px 12px",
-                borderRadius: 99, border: `1px solid ${T.border}`,
-                color: T.tertiary, background: T.offWhite,
-                letterSpacing: "0.03em",
-              }}>{tech}</span>
-            ))}
+        </section>
+
+        {/* SECTION 2 — Sliders + Waveform */}
+        <section id="parameters" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="section-grid">
+            <div className="col-left col-left-start">
+              <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.purpleMid, fontWeight: 600, marginBottom: 12 }}>
+                Step 2 — Configure
+              </p>
+              <h2 className="section-h2">DSP Parameters</h2>
+              <ParameterSliders params={params} onChange={setParams} />
+            </div>
+            <div className="col-right" style={{ justifyContent: "flex-start" }}>
+              <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.tertiary, fontWeight: 600, marginBottom: 12 }}>
+                Visualization
+              </p>
+              <h2 className="section-h2">Waveform</h2>
+              {result ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <WaveformCanvas data={result.original_waveform} label="Original" color="#52b788" duration={result.duration_original} />
+                  <WaveformCanvas data={result.processed_waveform} label="Processed" color="#a78bda" duration={result.duration_processed} />
+                </div>
+              ) : (
+                <div style={{ borderRadius: 16, background: T.white, border: `1px solid ${T.border}`, padding: "24px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 2, width: "100%", justifyContent: "center", overflow: "hidden" }}>
+                    {Array.from({ length: 60 }).map((_, i) => (
+                      <div key={i} style={{
+                        width: 3, borderRadius: 3, flexShrink: 0,
+                        height: `${Math.abs(Math.sin(i * 0.38) * Math.cos(i * 0.12)) * 55 + 8}px`,
+                        background: i % 3 === 0 ? "rgba(91,63,160,0.25)" : i % 3 === 1 ? "rgba(26,71,49,0.22)" : "rgba(82,183,136,0.2)",
+                      }} />
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 12, color: T.tertiary, fontWeight: 600, marginTop: 10 }}>Waveform will appear here</p>
+                  <p style={{ fontSize: 11, color: T.muted }}>Process your audio to compare waveforms</p>
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-            <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              Signal Processing
-            </span>
-            <div style={{ display: "flex", gap: 6 }}>
-              {["FFT", "Phase Vocoder", "Convolution"].map((tag) => (
-                <span key={tag} style={{
-                  fontSize: 9, padding: "3px 10px", borderRadius: 99,
-                  border: `1px solid ${T.borderGreen}`,
-                  color: T.green, background: T.greenTint,
-                }}>{tag}</span>
+        </section>
+
+        {/* SECTION 3 — Summary + Result */}
+        <section id="output" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="section-grid">
+            <div className="col-left col-left-start">
+              <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.purpleMid, fontWeight: 600, marginBottom: 12 }}>
+                Step 3 — Process
+              </p>
+              <h2 className="section-h2">Applied Transforms</h2>
+              <div style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 20 }}>
+                {[
+                  { label: "Pitch shift",  value: `${params.pitch > 0 ? "+" : ""}${params.pitch} st`,      green: true  },
+                  { label: "Time stretch", value: `${params.speed.toFixed(2)}×`,                            green: true  },
+                  { label: "Bass boost",   value: `+${params.bass} dB`,                                     green: false },
+                  { label: "Treble boost", value: `+${params.treble} dB`,                                   green: true  },
+                  { label: "Reverb",       value: `${params.reverb}%`,                                      green: false },
+                  { label: "Loudness",     value: `${params.loudness > 0 ? "+" : ""}${params.loudness} dB`, green: true  },
+                ].map((row, i, arr) => (
+                  <div key={row.label} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "12px 16px",
+                    background: i % 2 === 0 ? T.white : "#faf9fe",
+                    borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : "none",
+                  }}>
+                    <span style={{ fontSize: 12, color: T.secondary }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Syne', sans-serif", color: row.green ? T.green : T.purple }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              <ProcessButton state={state} disabled={!file} onClick={handleProcess} />
+            </div>
+
+            <div className="col-right" style={{ justifyContent: "flex-start" }}>
+              <p style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: T.tertiary, fontWeight: 600, marginBottom: 12 }}>
+                Output
+              </p>
+              <h2 className="section-h2">Processed Audio</h2>
+              {result ? (
+                <div style={{ background: T.white, borderRadius: 16, border: `1px solid ${T.borderGreen}`, overflow: "hidden" }}>
+                  <ResultPanel result={result} />
+                </div>
+              ) : (
+                <div style={{ borderRadius: 16, background: T.white, border: `1px dashed ${T.border}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 200, padding: 24 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, background: `linear-gradient(135deg, ${T.greenTint}, ${T.purpleTint})`, border: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="22" height="22" fill="none" stroke={T.green} strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <p style={{ fontSize: 13, color: T.tertiary, fontWeight: 600, marginBottom: 6 }}>No output yet</p>
+                    <p style={{ fontSize: 11, color: T.muted, lineHeight: 1.7 }}>Upload a file, configure parameters<br />and hit Process Audio</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer style={{ borderTop: `1px solid ${T.border}`, background: T.white }} className="footer-wrap">
+          <div className="footer-inner">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <img src="/logo.png" alt="AuraLace" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }} />
+              <div>
+                <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 800, color: T.green, letterSpacing: "0.08em" }}>AURALACE</span>
+                <p style={{ fontSize: 10, color: T.muted, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>Premium Signal Studio</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+              {["FastAPI", "Next.js", "Librosa", "NumPy", "SciPy"].map((tech) => (
+                <span key={tech} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 99, border: `1px solid ${T.border}`, color: T.tertiary, background: T.offWhite }}>{tech}</span>
               ))}
             </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>Signal Processing</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {["FFT", "Phase Vocoder", "Convolution"].map((tag) => (
+                  <span key={tag} style={{ fontSize: 9, padding: "3px 10px", borderRadius: 99, border: `1px solid ${T.borderGreen}`, color: T.green, background: T.greenTint }}>{tag}</span>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "18px 0",
-        }}>
-          <span style={{ fontSize: 11, color: T.muted }}>© 2026 AuraLace. Open-source under MIT License.</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 5px #22c55e88" }} />
-            <span style={{ fontSize: 11, color: T.muted }}>All systems operational</span>
+          <div className="footer-bottom">
+            <span style={{ fontSize: 11, color: T.muted }}>© 2026 AuraLace. Open-source under MIT License.</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: apiChecking ? "#d1d5db" : apiLive ? "#22c55e" : "#ef4444", boxShadow: apiLive && !apiChecking ? "0 0 5px #22c55e88" : "none" }} />
+              <span style={{ fontSize: 11, color: T.muted }}>{apiChecking ? "Checking..." : apiLive ? "All systems operational" : "Backend offline"}</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
 
-    </div>
+      </div>
+    </>
   );
 }
