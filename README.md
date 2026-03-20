@@ -1,29 +1,25 @@
-# AuraLace — Frontend
+# Aural Ace
 
-## Name
+**Aural** — of or relating to the ear. **Ace** — precise, sharp, dominant.
 
-**AuraLace** = **Aural** (relating to the ear / sound) + **Lace** (to weave, to thread together).
-
-The name reflects what the system does: it weaves multiple DSP transforms — pitch shifting, time stretching, EQ, reverb, loudness normalization — into a single sequential pipeline. "Lacing" the transforms together aurally.
-
-Secondary reading: **Aural Ace** — precise and sharp with sound.
+Aural Ace is an audio signal processing system. You give it audio. It transforms it — pitch, time, equalisation, reverb, loudness — and gives it back. The processing pipeline is deterministic, strictly ordered, and runs entirely on the backend. The client does one thing: put audio in, get processed audio out.
 
 ---
 
-## What This Repo Is
+## What This Is
 
-This is the **client layer** of a full-stack DSP system. It handles:
+Aural Ace is the **client layer** of a full-stack audio signal processing system. It handles:
 
-- Accepting audio input from the user (file upload)
-- Collecting transform parameters (six DSP controls)
-- Serializing and dispatching the request to the FastAPI backend via `multipart/form-data`
-- Receiving and rendering the processed output (waveform arrays + downloadable WAV)
+- Audio file ingestion via drag-drop or file browser
+- Six audio processing parameters exposed as range controls
+- Serialization and dispatch to the FastAPI backend via `multipart/form-data`
+- Rendering of dual waveforms (original vs. processed) and a WAV download
 
-It does **zero signal processing itself**. All DSP runs on the Python backend. This frontend is purely a transport and presentation layer.
+All audio processing runs on the Python backend. No signal processing occurs in the browser. This client is a transport and presentation layer — nothing more, nothing less.
 
 ---
 
-## System Context
+## System Architecture
 
 ```
 Browser (this repo)
@@ -37,7 +33,7 @@ FastAPI Backend (auralace-backend)
     │
     ├── librosa.effects.time_stretch   — phase vocoder TSM
     ├── librosa.effects.pitch_shift    — phase vocoder + resample
-    ├── numpy.fft.rfft/irfft           — FFT-based EQ (bass + treble)
+    ├── numpy.fft.rfft/irfft           — frequency-domain equalisation (bass + treble)
     ├── scipy.signal.fftconvolve       — convolution reverb
     ├── linear gain                    — loudness
     └── peak normalize → 0.95          — clipping prevention
@@ -54,30 +50,30 @@ ProcessResponse {
 }
     │
     ▼
-Browser renders waveforms, serves download link
+Browser renders waveforms + download link
 ```
 
 ---
 
-## Folder Structure
+## Repository Structure
 
 ```
 auralace/
 │
 ├── app/
-│   ├── globals.css          # global resets, font imports
-│   ├── layout.tsx           # root HTML shell, metadata, font injection
-│   └── page.tsx             # single page — state orchestrator, layout, section composition
+│   ├── globals.css          # Global resets, font imports
+│   ├── layout.tsx           # Root HTML shell, metadata, font injection
+│   └── page.tsx             # State orchestrator — the only file that owns state
 │
 ├── components/
-│   ├── AudioUploader.tsx    # drag-drop + browse input → emits File to parent
-│   ├── ParameterSliders.tsx # six range inputs → emits AudioParams on change
-│   ├── ProcessButton.tsx    # submit trigger, reads ProcessState for label/disabled
-│   ├── ResultPanel.tsx      # renders url, filename, duration, download link
-│   └── WaveForm.tsx         # canvas waveform renderer — takes number[200] + metadata
+│   ├── AudioUploader.tsx    # Drag-drop + browse → emits File to parent
+│   ├── ParameterSliders.tsx # Six range inputs → emits AudioParams on change
+│   ├── ProcessButton.tsx    # Submit trigger, driven by ProcessState
+│   ├── ResultPanel.tsx      # Renders url, filename, duration, download link
+│   └── WaveForm.tsx         # Canvas waveform renderer — 200 peak-amplitude points
 │
 ├── utils/
-│   └── api.ts               # all HTTP — processAudio(), getMediaUrl()
+│   └── api.ts               # All HTTP — processAudio(), getMediaUrl()
 │
 ├── types/
 │   └── index.ts             # AudioParams, ProcessResponse, ProcessState, ProcessingStatus
@@ -85,21 +81,18 @@ auralace/
 ├── public/
 │   └── logo.png
 │
-├── .env.local               # NEXT_PUBLIC_API_URL (not committed)
-├── .gitignore
+├── .env.local               # NEXT_PUBLIC_API_URL — never committed
 ├── next.config.ts
-├── next-env.d.ts
-├── eslint.config.mjs
 └── package.json
 ```
 
-### Key design decisions
+### Architecture Principles
 
-`page.tsx` owns all state. Components are fully controlled — they receive props and fire callbacks. No component has its own fetch call or holds domain state. The entire application state at any point is readable in one file.
+**`page.tsx` owns all state.** Components are fully controlled — they receive props and fire callbacks. No component holds its own domain state or makes its own network calls. The entire application state at any moment is readable in one file.
 
-`utils/api.ts` is the only file that knows the backend exists. If the endpoint, payload shape, or transport changes, only this file changes.
+**`utils/api.ts` is the only file that knows the backend exists.** If the endpoint, payload shape, or transport changes, exactly one file changes. Nothing else breaks.
 
-`types/index.ts` is the shared contract. `AudioParams` is what the backend expects. `ProcessResponse` is what it returns. These are the source of truth — if the backend schema changes, update here and TypeScript surfaces every breakage immediately.
+**`types/index.ts` is the contract.** `AudioParams` defines what the backend expects. `ProcessResponse` defines what it returns. If the backend schema changes, update here — TypeScript will surface every breakage immediately.
 
 ---
 
@@ -107,12 +100,12 @@ auralace/
 
 ```typescript
 export interface AudioParams {
-  pitch:    number;
-  speed:    number;
-  bass:     number;
-  treble:   number;
-  reverb:   number;
-  loudness: number;
+  pitch:    number;   // -12 to +12 semitones
+  speed:    number;   // 0.5× – 2.0×
+  bass:     number;   // 0 – 20 dB
+  treble:   number;   // 0 – 20 dB
+  reverb:   number;   // 0 – 100%
+  loudness: number;   // -20 to +20 dB
 }
 
 export type ProcessingStatus = "idle" | "uploading" | "processing" | "done" | "error";
@@ -135,85 +128,81 @@ export interface ProcessResponse {
 
 ---
 
-## DSP Pipeline — Confirmed Mechanisms
+## Audio Processing Pipeline
 
-The backend applies transforms in strict order. Order matters — time stretch before pitch shift, EQ before reverb, loudness before normalize.
+Transforms execute in strict sequence. Order is not configurable — it is enforced by the backend. Time stretch runs before pitch shift. Equalisation runs before reverb. Loudness runs before normalisation. This ordering is intentional and load-bearing.
 
-| Stage | Parameter | Range | Backend call | Mechanism |
-|-------|-----------|-------|-------------|-----------|
-| 1 | `speed` | 0.5× – 2.0× | `librosa.effects.time_stretch(y, rate=speed)` | Phase vocoder — STFT-based time-scale modification. Pitch unchanged. `rate > 1.0` = faster/shorter, `rate < 1.0` = slower/longer. Skipped if within 0.01 of 1.0. |
-| 2 | `pitch` | -12 to +12 st | `librosa.effects.pitch_shift(y, sr=sr, n_steps=pitch)` | Phase vocoder internally calls `time_stretch` then resamples to restore duration. Skipped if `abs(pitch) < 0.01`. |
-| 3 | `bass` | 0 – 20 dB | `_fft_eq(y, sr, gain_db, cutoff=250.0, boost_below=True)` | `rfft` → sigmoid gain mask applied to frequency bins below 250Hz → `irfft`. Gain in linear: `10^(dB/20)`. Sigmoid transition width 200Hz (soft shelf, not brick-wall). Skipped if `bass < 0.01`. |
-| 4 | `treble` | 0 – 20 dB | `_fft_eq(y, sr, gain_db, cutoff=4000.0, boost_below=False)` | Same FFT mechanism. Mirrored sigmoid — boosts bins above 4000Hz. Transition width 200Hz. Skipped if `treble < 0.01`. |
-| 5 | `reverb` | 0 – 100% | `scipy.signal.fftconvolve(y, ir, mode="full")` | Convolution with a **synthetic** room IR. IR = white noise shaped by exponential decay envelope. Room size and decay length both scale with wet percentage. Wet signal RMS-normalized before mix. Dry always preserved: `dry = 1.0 - (wet * 0.5)`. Skipped if `reverb < 0.01`. |
-| 6 | `loudness` | -20 to +20 dB | `y * 10^(dB/20)` | Linear gain applied to entire signal. Skipped if `abs(loudness) < 0.01`. |
-| 7 | normalize | — | `y / max(abs(y)) * 0.95` | Peak normalize — always applied unconditionally. Output peak is always 0.95. Because this runs after loudness, the loudness parameter affects relative dynamics within the signal, not the absolute output level. |
+| Stage | Parameter | Range | Mechanism |
+|-------|-----------|-------|-----------|
+| 1 | `speed` | 0.5× – 2.0× | `librosa.effects.time_stretch` — STFT-based phase vocoder. Pitch is preserved. `rate > 1.0` = faster. Skipped if within 0.01 of 1.0. |
+| 2 | `pitch` | -12 to +12 st | `librosa.effects.pitch_shift` — internally calls `time_stretch` then resamples to restore duration. Skipped if `abs(pitch) < 0.01`. |
+| 3 | `bass` | 0 – 20 dB | `rfft` → sigmoid gain mask on bins below 250 Hz → `irfft`. Transition width 200 Hz (soft shelf). Skipped if `bass < 0.01`. |
+| 4 | `treble` | 0 – 20 dB | Same frequency-domain mechanism, mirrored — boosts bins above 4000 Hz. Transition width 200 Hz. Skipped if `treble < 0.01`. |
+| 5 | `reverb` | 0 – 100% | `scipy.signal.fftconvolve` with a synthetic room IR. Exponential decay envelope. Wet signal RMS-normalized. Dry preserved: `dry = 1.0 - (wet * 0.5)`. Skipped if `reverb < 0.01`. |
+| 6 | `loudness` | -20 to +20 dB | Linear gain: `y * 10^(dB/20)`. Affects relative dynamics, not absolute output level (normalize runs after). Skipped if `abs(loudness) < 0.01`. |
+| 7 | normalise | — | `y / max(abs(y)) * 0.95` — always applied unconditionally. Output peak is always 0.95. |
 
-**Output:** always `float32` WAV, written via `soundfile.write`. Sample rate preserved from input (no resampling).
+**Output:** `float32` WAV via `soundfile.write`. Sample rate is preserved from input — no resampling occurs.
 
 ---
 
 ## Waveform Data
 
-Both `original_waveform` and `processed_waveform` in the response are exactly **200 points**.
-
-Each point is the **peak amplitude** (not RMS, not mean) of a chunk of `len(y) // 200` samples:
+Both `original_waveform` and `processed_waveform` are exactly **200 points**. Each point is the **peak amplitude** of a `len(y) // 200` sample chunk:
 
 ```python
 chunk_size = max(1, len(y) // num_points)
 peak = float(np.max(np.abs(chunk)))  # peak, rounded to 4dp
 ```
 
-Padded with `0.0` if the signal is shorter than 200 chunks. Trimmed to 200 if longer.
-
-The frontend `WaveForm.tsx` renders these 200 values directly onto a canvas element.
+Padded with `0.0` if the signal is under 200 chunks. Trimmed to 200 if over. `WaveForm.tsx` renders these values directly to a canvas element.
 
 ---
 
-## Data Flow (Request Lifecycle)
+## Request Lifecycle
 
 ```
-1. User drops/selects audio file
-        → AudioUploader calls onFileSelect(File)
-        → page.tsx: setFile(file)
+1. File selected
+       → AudioUploader fires onFileSelect(File)
+       → page.tsx: setFile(file)
 
-2. User moves sliders
-        → ParameterSliders calls onChange(AudioParams)
-        → page.tsx: setParams(params)
+2. Sliders adjusted
+       → ParameterSliders fires onChange(AudioParams)
+       → page.tsx: setParams(params)
 
-3. User clicks Process
-        → page.tsx: handleProcess()
-        → setState({ status: "uploading" })
-        → setState({ status: "processing" })
-        → api.processAudio(file, params)
+3. Process clicked
+       → page.tsx: handleProcess()
+       → setState({ status: "uploading" })
+       → setState({ status: "processing" })
+       → api.processAudio(file, params)
 
-              FormData {
-                audio:    File,        // key is "audio", not "file"
-                pitch:    "-3",
-                speed:    "1.25",
-                bass:     "6",
-                treble:   "0",
-                reverb:   "40",
-                loudness: "2"
-              }
-              POST {NEXT_PUBLIC_API_URL}/api/process/
+             FormData {
+               audio:    File,      // key is "audio", not "file"
+               pitch:    "-3",
+               speed:    "1.25",
+               bass:     "6",
+               treble:   "0",
+               reverb:   "40",
+               loudness: "2"
+             }
+             POST {NEXT_PUBLIC_API_URL}/api/process/
 
-4. Backend responds 200
-        → setResult(ProcessResponse)
-        → setState({ status: "done" })
-        → WaveformCanvas draws original_waveform[200] and processed_waveform[200]
-        → ResultPanel renders download via getMediaUrl(result.url)
+4. 200 response
+       → setResult(ProcessResponse)
+       → setState({ status: "done" })
+       → WaveformCanvas draws original_waveform[200] and processed_waveform[200]
+       → ResultPanel renders download via getMediaUrl(result.url)
 
-5. Backend responds 400 / 500
-        → setState({ status: "error", error: detail })
-        → ProcessButton shows error state
+5. 400 / 500 response
+       → setState({ status: "error", error: detail })
+       → ProcessButton surfaces error state
 ```
 
 ---
 
-## Backend Validation (server-side only, no client-side equivalent)
+## Backend Validation
 
-The backend clamps all parameters before processing:
+The backend clamps all parameters server-side. The client sends slider values as-is — out-of-range inputs are silently corrected:
 
 ```python
 pitch    = max(-12.0, min(12.0,  pitch))
@@ -224,103 +213,83 @@ reverb   = max(0.0,   min(100.0, reverb))
 loudness = max(-20.0, min(20.0,  loudness))
 ```
 
-File type validation returns **HTTP 400** (not 415) for unsupported formats. Accepted: `audio/wav`, `audio/wave`, `audio/mpeg`, `audio/mp3`, `audio/x-wav`, `.wav`, `.mp3` by extension.
+Unsupported file types return **HTTP 400**. Accepted: `audio/wav`, `audio/wave`, `audio/mpeg`, `audio/mp3`, `audio/x-wav`, `.wav`, `.mp3`.
 
-The frontend currently sends whatever the slider values are with no pre-validation. Out-of-range values are silently clamped by the backend.
-
-Input file is deleted after processing regardless of success or failure (`finally: cleanup_input(input_path)`).
+Input files are deleted after processing regardless of success or failure (`finally: cleanup_input(input_path)`).
 
 ---
 
-## Current Limitations
+## Known Limitations
 
-**No client-side validation.** File size, MIME type, and parameter bounds are not checked before the request fires. A 200MB file or a `.pdf` goes all the way to the backend before being rejected with a 400.
+**No client-side validation.** File size, MIME type, and parameter bounds are unchecked before dispatch. A 200 MB file or a PDF goes all the way to the backend before being rejected.
 
-**No in-browser audio playback.** There is no `<audio>` element. Users must download the WAV and open it externally to hear the result.
+**No in-browser playback.** There is no `<audio>` element. The user downloads the WAV and opens it externally.
 
-**Waveform requires a backend round-trip.** `original_waveform` comes from the backend response, not from client-side decoding. The browser cannot show the waveform until processing completes, even though it has the file locally.
+**Waveform requires a backend round-trip.** `original_waveform` comes from the response — not from client-side decoding. The browser cannot show the source waveform until processing completes, even though it has the file locally.
 
-**No request cancellation.** Once Process is clicked there is no abort. No `AbortController`, no cancel button.
+**No request cancellation.** Once Process is clicked there is no abort. No `AbortController`. No cancel button.
 
-**Non-deterministic reverb.** The IR in `apply_reverb` is generated with `np.random.randn` and no fixed seed. Two identical requests with identical parameters produce slightly different reverb tails. Output is not reproducible.
+**Non-deterministic reverb.** The IR is generated with `np.random.randn` and no fixed seed. Two identical requests with identical parameters produce slightly different reverb tails. Output is not reproducible.
 
-**No processing history.** Each session starts fresh. No way to compare two parameter configurations or re-download a previous result.
+**No processing history.** Each session is stateless. No way to compare configurations or re-download a previous result.
 
 **No streaming or progress.** The backend processes synchronously. Long files block until all 7 stages complete with no intermediate feedback.
 
-**Cold start latency.** Render's free tier spins down after inactivity. First request after idle can take 10–30 seconds. The frontend has no awareness — the button appears frozen with no explanation.
+**Cold start latency.** Render's free tier spins down after inactivity. First request after idle can take 10–30 seconds. The frontend has no awareness of this — the button appears frozen.
 
-**Mobile layout unaddressed.** Two-column grid collapses poorly below 768px.
+**Mobile layout unaddressed.** The two-column grid collapses poorly below 768px.
 
-**Fonts load from Google Fonts CDN.** Render-blocking external request. Breaks in offline or restricted-network environments.
+**Google Fonts CDN dependency.** Render-blocking external request. Breaks in offline or restricted-network environments.
 
 ---
 
-## Potential Improvements
+## Planned Improvements
 
-### Immediate (low effort, high impact)
+### Immediate
 
-**Client-side pre-validation.**
-Before sending, reject bad inputs immediately:
+**Client-side pre-validation** — reject bad inputs before any network call:
 ```typescript
 if (file.size > 50 * 1024 * 1024) throw new Error("File exceeds 50MB limit");
 if (!file.type.startsWith("audio/")) throw new Error("Only audio files accepted");
 ```
-Avoids unnecessary backend calls and gives instant feedback.
 
-**In-browser audio playback.**
-After processing, render:
+**In-browser audio playback** — the `url` field is already in `ProcessResponse`. This is one line:
 ```tsx
 <audio controls src={getMediaUrl(result.url)} />
 ```
-Zero backend dependency. Works immediately with the `url` field already in `ProcessResponse`.
 
-**Cold-start warning.**
-On page mount, fire `GET /` to the backend (it returns `{"status":"running"}`). If response takes more than 2 seconds, show "Backend is warming up..." and disable the Process button until it responds. Eliminates the frozen-button confusion.
+**Cold-start detection** — on mount, fire `GET /` to the backend. If response takes over 2 seconds, surface "Backend warming up…" and hold the Process button until it responds.
 
-**Fix non-deterministic reverb.**
-In `dsp/reverb.py`, add before the IR generation:
+**Fix non-deterministic reverb** — seed the RNG before IR generation:
 ```python
 np.random.seed(42)
 noise = np.random.randn(length)
 ```
-Same parameters will now always produce the same output. Required for any kind of reproducible testing.
 
-### Medium (moderate effort)
+### Medium-term
 
-**Client-side waveform on upload.**
-Use `AudioContext.decodeAudioData()` to decode the uploaded file in the browser and draw `original_waveform` immediately — before any backend call:
+**Client-side waveform on upload** — decode the file in the browser via `AudioContext.decodeAudioData()` and draw `original_waveform` immediately, before the backend call:
 ```typescript
 const arrayBuffer = await file.arrayBuffer();
 const audioCtx = new AudioContext();
 const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-const samples = audioBuffer.getChannelData(0); // Float32Array
+const samples = audioBuffer.getChannelData(0);
 ```
-Removes the dependency on `original_waveform` from the response entirely.
 
-**Request cancellation.**
-Wrap the axios call with an `AbortController`. Expose a Cancel button during processing. Essential when iterating on parameters for long files:
+**Request cancellation** — `AbortController` + a visible cancel button during processing:
 ```typescript
 const controller = new AbortController();
 await axios.post(url, formData, { signal: controller.signal });
 ```
 
-**Shareable parameter URLs.**
-Encode `AudioParams` into the query string on every slider change:
+**Shareable parameter URLs** — encode `AudioParams` into the query string on every slider change. Parse on mount. No backend required:
 ```
 /studio?pitch=-3&speed=1.2&bass=6&treble=0&reverb=40&loudness=2
 ```
-On mount, parse and initialize state from query params. Users can share exact configurations. No backend required.
 
-**Session history.**
-After each successful process, append to `localStorage`:
-```typescript
-{ timestamp, filename, params, url, duration_processed, sample_rate }
-```
-Render a collapsible history panel. Users can restore params or re-download without reprocessing.
+**Session history** — append to `localStorage` after each successful process. Render a collapsible panel. Restore params or re-download without reprocessing.
 
-**Named presets.**
-A preset is just a saved `AudioParams` object:
+**Named presets** — a preset is an `AudioParams` object. Clicking one calls `setParams()`. One line of state:
 ```typescript
 const PRESETS: Record<string, AudioParams> = {
   "Vaporwave":       { pitch: -4, speed: 0.8, bass: 4,  treble: 0, reverb: 60, loudness: 0  },
@@ -329,37 +298,23 @@ const PRESETS: Record<string, AudioParams> = {
   "Lo-fi":           { pitch: -2, speed: 0.9, bass: 6,  treble: 0, reverb: 30, loudness: -2 },
 };
 ```
-Clicking a preset calls `setParams(PRESETS[name])`. One line of state update.
 
-### Longer term
+### Longer-term
 
-**WebSocket or SSE for per-stage progress.**
-Replace the blocking POST with a WebSocket. Backend emits events as each stage completes:
-```json
-{ "stage": "time_stretch", "progress": 0.14 }
-{ "stage": "pitch_shift",  "progress": 0.28 }
-{ "stage": "bass_boost",   "progress": 0.42 }
-...
-```
-Frontend renders a live progress bar per stage. Meaningful for files longer than ~30 seconds.
+**WebSocket / SSE per-stage progress** — replace the blocking POST. Backend emits events as each stage completes. Frontend renders a live progress bar. Meaningful for files over ~30 seconds.
 
-**Batch processing.**
-Accept a queue of files, process sequentially with the same params. Per-file status (pending / processing / done / error). Useful for processing multiple takes with identical settings.
+**Batch processing** — accept a file queue, process sequentially with identical params, expose per-file status.
 
-**Self-host fonts.**
-Move Syne and DM Mono into `/public/fonts/`, use `next/font/local`. Eliminates the Google Fonts CDN request. Works offline. Faster LCP.
+**Self-host fonts** — move Syne and DM Mono into `/public/fonts/`, use `next/font/local`. Eliminates the CDN dependency. Works offline. Faster LCP.
 
-**Build-time env validation.**
-In `next.config.ts`:
+**Build-time env validation** — fail the build explicitly if `NEXT_PUBLIC_API_URL` is unset:
 ```typescript
 if (!process.env.NEXT_PUBLIC_API_URL) {
   throw new Error("NEXT_PUBLIC_API_URL is not set");
 }
 ```
-Fails the build explicitly instead of silently falling back to localhost and shipping broken to production.
 
-**Retry with exponential backoff.**
-Wrap `processAudio()` with automatic retry (max 3 attempts, 1s / 2s / 4s delays). Catches transient 503s from Render cold starts automatically without user intervention.
+**Retry with exponential backoff** — wrap `processAudio()` with automatic retry (3 attempts, 1s / 2s / 4s delays). Handles transient 503s from Render cold starts without user intervention.
 
 ---
 
@@ -370,7 +325,7 @@ Wrap `processAudio()` with automatic retry (max 3 attempts, 1s / 2s / 4s delays)
 NEXT_PUBLIC_API_URL=https://auralace-backend.onrender.com
 ```
 
-Falls back to `http://localhost:8000` if unset. Set in Vercel dashboard for production — never commit `.env.local`.
+Falls back to `http://localhost:8000` if unset. Set in the Vercel dashboard for production. Never commit `.env.local`.
 
 ---
 

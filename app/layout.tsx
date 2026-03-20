@@ -5,7 +5,7 @@ import "./globals.css";
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID!;
 
 export const metadata: Metadata = {
-  title: "AuraLace — Audio Modulation Studio",
+  title: "AuralAce — Audio Modulation Studio",
   description:
     "Real-time speech and audio modulation using DSP techniques. Pitch shift, time stretch, bass boost.",
 };
