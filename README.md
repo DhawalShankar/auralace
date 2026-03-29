@@ -16,7 +16,6 @@ Aural Ace is the **client layer** of a full-stack audio signal processing system
 - Rendering of dual waveforms (original vs. processed) and a WAV download
 
 All audio processing runs on the Python backend. No signal processing occurs in the browser. This client is a transport and presentation layer — nothing more, nothing less.
-
 ---
 
 ## System Architecture
